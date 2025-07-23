@@ -1,69 +1,44 @@
-# React + TypeScript + Vite
+#  TypeRush
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**TypeRush** is a sleek and responsive typing practice web application designed to help users improve their typing speed and accuracy. With a modern **black and blue theme**, real-time feedback, and performance tracking, TypeRush delivers a focused and engaging typing experience.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🔥 Features
 
-## Expanding the ESLint configuration
+- 📝 **Random Text Generation**  
+  Practice with dynamically generated sentences to simulate real-world typing scenarios.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- ⏱️ **Live Typing Metrics**  
+  Real-time stats including:
+  - Words Per Minute (WPM)
+  - Accuracy (%)
+  - Elapsed time
+  - Correct / Incorrect keystrokes
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- 🎯 **Real-time Character Feedback**  
+  - Blue highlight for current character
+  - Green for correct inputs
+  - Red for mistakes
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+- 📊 **Session Summary**  
+  - Post-typing breakdown of speed and accuracy
+  - Option to restart or load new text
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- 🌓 **Dark Themed UI**  
+  - Elegant black background with blue accent styling
+  - Clean, distraction-free layout
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+- 🔁 **Restart & Refresh**  
+  - Instantly reset the test or load new random text
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- 📱 **Fully Responsive**  
+  - Smooth experience across desktops, tablets, and mobile devices
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
+
+## 🛠️ Tech Stack
+
+- **React** (with Hooks)
+- **CSS / TailwindCSS** (for styling)
+- **Custom utility functions** for WPM, accuracy, and timer logic
