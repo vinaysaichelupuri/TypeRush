@@ -24,7 +24,7 @@ function App() {
         <div className="container mx-auto px-4 py-6">
           <div className="text-center">
             <p className="text-gray-400 text-sm">
-              Designed{" "}
+              Designed and Developed by{" "}
               <span className="text-blue-400 font-semibold hover:text-blue-300 transition-colors">
                 Vinay Sai Chelupuri
               </span>

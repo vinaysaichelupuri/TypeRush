@@ -7,9 +7,11 @@ interface LeaderboardProps {
 }
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ results }) => {
-  const topResults = results
+  const topResults = [...results]
     .sort((a, b) => b.wpm - a.wpm)
     .slice(0, 10);
+
+    console.log(results)
 
   const getRankIcon = (index: number) => {
     switch (index) {
@@ -20,7 +22,11 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ results }) => {
       case 2:
         return <Award className="w-5 h-5 text-orange-400" />;
       default:
-        return <span className="w-5 h-5 flex items-center justify-center text-gray-400 font-bold">{index + 1}</span>;
+        return (
+          <span className="w-5 h-5 flex items-center justify-center text-gray-400 font-bold">
+            {index + 1}
+          </span>
+        );
     }
   };
 
@@ -48,10 +54,8 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ results }) => {
               : 'bg-gray-800/50 border-gray-700'
           }`}
         >
-          <div className="flex-shrink-0">
-            {getRankIcon(index)}
-          </div>
-          
+          <div className="flex-shrink-0">{getRankIcon(index)}</div>
+
           <div className="flex-grow">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -65,7 +69,8 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ results }) => {
                   {new Date(result.date).toLocaleDateString()}
                 </div>
                 <div className="text-gray-500 text-xs">
-                  {Math.floor(result.timeElapsed / 60)}:{(result.timeElapsed % 60).toString().padStart(2, '0')}
+                  {Math.floor(result.timeElapsed / 60)}:
+                  {(result.timeElapsed % 60).toString().padStart(2, '0')}
                 </div>
               </div>
             </div>
@@ -75,5 +80,6 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ results }) => {
     </div>
   );
 };
+
 
 export default Leaderboard;

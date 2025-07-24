@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, RotateCcw, Trophy, Settings } from 'lucide-react';
 import { TypingStats, CharacterState, SessionResult } from '../types';
-import { generateRandomText, generateTextByDifficulty, generateTextByFocus, calculateWPM, calculateAccuracy } from '../ utils/textGenerator';
+import {  generateTextByDifficulty, generateTextByFocus, calculateWPM, calculateAccuracy } from '../ utils/textGenerator';
 import Statistics from './Statistics';
 import Results from './Results';
 import Leaderboard from './Leaderboard';
@@ -19,6 +19,7 @@ const TypingTest: React.FC = () => {
   const [currentResult, setCurrentResult] = useState<SessionResult | null>(null);
   const [savedResults, setSavedResults] = useState<SessionResult[]>([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [hasSavedResult, setHasSavedResult] = useState(false);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [focus, setFocus] = useState<'speed' | 'accuracy' | 'programming' | 'random'>('random');
 
@@ -41,6 +42,7 @@ const TypingTest: React.FC = () => {
       setSavedResults(JSON.parse(saved));
     }
   }, []);
+  console.log('saved results',savedResults)
 
   // Initialize with random text
   useEffect(() => {
@@ -98,28 +100,31 @@ const TypingTest: React.FC = () => {
   }, [userInput, timeElapsed, text]);
 
   // Check if test is complete
-  useEffect(() => {
-    if (userInput.length === text.length && text.length > 0) {
-      setIsFinished(true);
-      setIsStarted(false);
-      
-      const result: SessionResult = {
-        ...stats,
-        id: Date.now().toString(),
-        date: Date.now(),
-        textLength: text.length,
-      };
+useEffect(() => {
+  const testIsComplete = userInput.length === text.length && text.length > 0;
 
-      setCurrentResult(result);
-      
-      // Save result
-      const newResults = [...savedResults, result];
-      setSavedResults(newResults);
+  if (testIsComplete && !hasSavedResult) {
+    setIsFinished(true);
+    setIsStarted(false);
+
+    const result: SessionResult = {
+      ...stats,
+      id: Date.now().toString(),
+      date: Date.now(),
+      textLength: text.length,
+    };
+    setCurrentResult(result);
+    setSavedResults((prevResults) => {
+      const newResults = [...prevResults, result];
       localStorage.setItem('typingResults', JSON.stringify(newResults));
-      
-      setTimeout(() => setShowResults(true), 500);
-    }
-  }, [userInput, text, stats, savedResults]);
+      return newResults;
+    });
+
+    setHasSavedResult(true);
+    setTimeout(() => setShowResults(true), 500);
+  }
+}, [userInput, text, stats, hasSavedResult]);
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;

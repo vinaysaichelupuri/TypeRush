@@ -14,7 +14,6 @@ const lorem = new LoremIpsum({
 
 // Different text types for variety
 const textTypes = [
-  'lorem',
   'programming',
   'literature',
   'science',
@@ -117,11 +116,6 @@ export const generateRandomText = (minLength: number = 200, maxLength: number = 
   let generatedText = '';
   
   switch (textType) {
-    case 'lorem':
-      // Generate lorem ipsum text
-      const paragraphCount = Math.ceil(targetLength / 100);
-      generatedText = lorem.generateParagraphs(paragraphCount);
-      break;
       
     case 'programming':
       generatedText = generateProgrammingText(targetLength);
