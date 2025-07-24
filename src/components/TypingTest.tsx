@@ -100,10 +100,12 @@ const TypingTest: React.FC = () => {
   }, [userInput, timeElapsed, text]);
 
   // Check if test is complete
+  const hasSavedResultRef = useRef(false);
 useEffect(() => {
   const testIsComplete = userInput.length === text.length && text.length > 0;
 
-  if (testIsComplete && !hasSavedResult) {
+  if (testIsComplete && !hasSavedResultRef.current) {
+    hasSavedResultRef.current = true;
     setIsFinished(true);
     setIsStarted(false);
 
@@ -152,6 +154,7 @@ useEffect(() => {
   };
 
   const resetTest = useCallback(() => {
+    hasSavedResultRef.current = false;
     setUserInput('');
     setCurrentIndex(0);
     setIsStarted(false);

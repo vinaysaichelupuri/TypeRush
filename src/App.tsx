@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useEffect } from "react";
 import TypingTest from "./components/TypingTest";
 import VSLogo from "./assets/logo.jpg";
 
 function App() {
+  useEffect(()=>{
+    localStorage.setItem('typingResults',JSON.stringify([]))
+  })
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       <div className="flex items-center space-x-3">
