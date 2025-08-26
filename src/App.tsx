@@ -3,9 +3,9 @@ import TypingTest from "./components/TypingTest";
 import VSLogo from "./assets/logo.jpg";
 
 function App() {
-  useEffect(()=>{
-    localStorage.setItem('typingResults',JSON.stringify([]))
-  })
+  useEffect(() => {
+    localStorage.setItem("typingResults", JSON.stringify([]));
+  });
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       <div className="flex items-center space-x-3">
@@ -28,9 +28,14 @@ function App() {
           <div className="text-center">
             <p className="text-gray-400 text-sm">
               Designed and Developed by{" "}
-              <span className="text-blue-400 font-semibold hover:text-blue-300 transition-colors">
+              <a
+                href="https://in.linkedin.com/in/vinay-sai-chelupuri-085642277"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 font-semibold hover:text-blue-300 transition-colors"
+              >
                 Vinay Sai Chelupuri
-              </span>
+              </a>
             </p>
           </div>
         </div>
