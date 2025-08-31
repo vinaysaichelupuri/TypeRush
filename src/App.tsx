@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import TypingTest from "./components/TypingTest";
-import VSLogo from "./assets/logo.jpg";
+// import VSLogo from "./assets/logo.jpg";
+import appLogo from "./assets/TypeRush.png";
 
 function App() {
   useEffect(() => {
@@ -10,7 +11,7 @@ function App() {
     <div className="min-h-screen bg-black text-white flex flex-col">
       <div className="flex items-center space-x-3">
         <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg">
-          <img src={VSLogo} alt="Logo" className="w-8 h-8 object-contain" />
+          <img src={appLogo} alt="Logo" className="w-8 h-8 object-contain" />
         </div>
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
