@@ -1,10 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, RotateCcw, Trophy, Settings } from 'lucide-react';
+import { Play, RotateCcw, Trophy, Settings, Users } from 'lucide-react';
 import { TypingStats, CharacterState, SessionResult } from '../types';
-import {  generateTextByDifficulty, generateTextByFocus, calculateWPM, calculateAccuracy } from '../ utils/textGenerator';
+import { generateRandomText, generateTextByDifficulty, generateTextByFocus, calculateWPM, calculateAccuracy } from '../ utils/textGenerator';
 import Statistics from './Statistics';
 import Results from './Results';
 import Leaderboard from './Leaderboard';
+import MultiplayerMenu from './MultiplayerMenu';
+import RoomLobby from './RoomLobby';
+import MultiplayerRace from './MultiplayerRace';
+import RaceResults from './RaceResults';
+import { FirebaseService } from '../services/firebaseService';
+import { RaceRoom } from '../types';
 
 const TypingTest: React.FC = () => {
   const [text, setText] = useState('');
@@ -19,12 +25,20 @@ const TypingTest: React.FC = () => {
   const [currentResult, setCurrentResult] = useState<SessionResult | null>(null);
   const [savedResults, setSavedResults] = useState<SessionResult[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [hasSavedResult, setHasSavedResult] = useState(false);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [focus, setFocus] = useState<'speed' | 'accuracy' | 'programming' | 'random'>('random');
+  
+  // Multiplayer states
+  const [gameMode, setGameMode] = useState<'single' | 'multiplayer'>('single');
+  const [multiplayerState, setMultiplayerState] = useState<'menu' | 'lobby' | 'racing' | 'results'>('menu');
+  const [currentRoom, setCurrentRoom] = useState<RaceRoom | null>(null);
+  const [currentPlayerId, setCurrentPlayerId] = useState<string>('');
+  const [multiplayerError, setMultiplayerError] = useState<string>('');
+  const [isMultiplayerLoading, setIsMultiplayerLoading] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   const [stats, setStats] = useState<TypingStats>({
     wpm: 0,
@@ -42,7 +56,15 @@ const TypingTest: React.FC = () => {
       setSavedResults(JSON.parse(saved));
     }
   }, []);
-  console.log('saved results',savedResults)
+
+  // Cleanup Firebase listener on unmount
+  useEffect(() => {
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
+  }, []);
 
   // Initialize with random text
   useEffect(() => {
@@ -100,33 +122,28 @@ const TypingTest: React.FC = () => {
   }, [userInput, timeElapsed, text]);
 
   // Check if test is complete
-  const hasSavedResultRef = useRef(false);
-useEffect(() => {
-  const testIsComplete = userInput.length === text.length && text.length > 0;
+  useEffect(() => {
+    if (userInput.length === text.length && text.length > 0) {
+      setIsFinished(true);
+      setIsStarted(false);
+      
+      const result: SessionResult = {
+        ...stats,
+        id: Date.now().toString(),
+        date: Date.now(),
+        textLength: text.length,
+      };
 
-  if (testIsComplete && !hasSavedResultRef.current) {
-    hasSavedResultRef.current = true;
-    setIsFinished(true);
-    setIsStarted(false);
-
-    const result: SessionResult = {
-      ...stats,
-      id: Date.now().toString(),
-      date: Date.now(),
-      textLength: text.length,
-    };
-    setCurrentResult(result);
-    setSavedResults((prevResults) => {
-      const newResults = [...prevResults, result];
+      setCurrentResult(result);
+      
+      // Save result
+      const newResults = [...savedResults, result];
+      setSavedResults(newResults);
       localStorage.setItem('typingResults', JSON.stringify(newResults));
-      return newResults;
-    });
-
-    setHasSavedResult(true);
-    setTimeout(() => setShowResults(true), 500);
-  }
-}, [userInput, text, stats, hasSavedResult]);
-
+      
+      setTimeout(() => setShowResults(true), 500);
+    }
+  }, [userInput, text, stats, savedResults]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -154,7 +171,6 @@ useEffect(() => {
   };
 
   const resetTest = useCallback(() => {
-    hasSavedResultRef.current = false;
     setUserInput('');
     setCurrentIndex(0);
     setIsStarted(false);
@@ -172,6 +188,120 @@ useEffect(() => {
     generateNewText();
     resetTest();
   }, [resetTest, difficulty, focus]);
+
+  // Multiplayer functions
+  const handleCreateRoom = async (playerName: string) => {
+    setIsMultiplayerLoading(true);
+    setMultiplayerError('');
+    
+    try {
+      const newText = focus === 'random' ? generateTextByDifficulty(difficulty) : generateTextByFocus(focus);
+      const roomId = await FirebaseService.createRoom(playerName, newText);
+      
+      // Subscribe to room updates
+      unsubscribeRef.current = FirebaseService.subscribeToRoom(roomId, (room) => {
+        if (room) {
+          setCurrentRoom(room);
+          setCurrentPlayerId(room.creatorId);
+          
+          if (room.status === 'racing' && multiplayerState === 'lobby') {
+            setMultiplayerState('racing');
+          } else if (room.status === 'finished') {
+            setMultiplayerState('results');
+          }
+        }
+      });
+      
+      setMultiplayerState('lobby');
+    } catch (error) {
+      setMultiplayerError(error instanceof Error ? error.message : 'Failed to create room');
+    } finally {
+      setIsMultiplayerLoading(false);
+    }
+  };
+
+  const handleJoinRoom = async (roomId: string, playerName: string) => {
+    setIsMultiplayerLoading(true);
+    setMultiplayerError('');
+    
+    try {
+      console.log('Attempting to join room:', roomId);
+      
+      // First check if room exists
+      const roomExists = await FirebaseService.roomExists(roomId);
+      if (!roomExists) {
+        throw new Error('Room not found. Please check the room ID and try again.');
+      }
+      
+      const playerId = await FirebaseService.joinRoom(roomId, playerName);
+      
+      if (playerId) {
+        setCurrentPlayerId(playerId);
+        
+        // Subscribe to room updates
+        unsubscribeRef.current = FirebaseService.subscribeToRoom(roomId, (room) => {
+          if (room) {
+            setCurrentRoom(room);
+            
+            if (room.status === 'countdown' && multiplayerState === 'lobby') {
+              // Stay in lobby during countdown
+            } else if (room.status === 'racing' && multiplayerState === 'lobby') {
+              // Stay in lobby during countdown
+            } else if (room.status === 'racing' && multiplayerState === 'lobby') {
+              setMultiplayerState('racing');
+            } else if (room.status === 'finished') {
+              setMultiplayerState('results');
+            }
+          }
+        });
+        
+        setMultiplayerState('lobby');
+      }
+    } catch (error) {
+      console.error('Error joining room:', error);
+      setMultiplayerError(error instanceof Error ? error.message : 'Failed to join room');
+    } finally {
+      setIsMultiplayerLoading(false);
+    }
+  };
+
+  const handleStartRace = async () => {
+    if (!currentRoom || !currentPlayerId) return;
+    
+    try {
+      await FirebaseService.startRace(currentRoom.id);
+    } catch (error) {
+      setMultiplayerError(error instanceof Error ? error.message : 'Failed to start race');
+    }
+  };
+
+  const handleLeaveRoom = async () => {
+    if (currentRoom && currentPlayerId) {
+      try {
+        await FirebaseService.leaveRoom(currentRoom.id, currentPlayerId);
+      } catch (error) {
+        console.error('Error leaving room:', error);
+      }
+    }
+    
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+    
+    setCurrentRoom(null);
+    setCurrentPlayerId('');
+    setMultiplayerState('menu');
+    setGameMode('single');
+  };
+
+  const handleRaceComplete = () => {
+    setMultiplayerState('results');
+  };
+
+  const handleNewMultiplayerRace = () => {
+    handleLeaveRoom();
+  };
 
   const getCharacterStates = (): CharacterState[] => {
     return text.split('').map((char, index) => {
@@ -198,6 +328,53 @@ useEffect(() => {
     ? savedResults.reduce((best, current) => current.wpm > best.wpm ? current : best)
     : undefined;
 
+  // Render multiplayer components
+  if (gameMode === 'multiplayer') {
+    if (multiplayerState === 'menu') {
+      return (
+        <MultiplayerMenu
+          onCreateRoom={handleCreateRoom}
+          onJoinRoom={handleJoinRoom}
+          onBackToSinglePlayer={() => setGameMode('single')}
+          isLoading={isMultiplayerLoading}
+          error={multiplayerError}
+        />
+      );
+    }
+    
+    if (multiplayerState === 'lobby' && currentRoom) {
+      return (
+        <RoomLobby
+          room={currentRoom}
+          currentPlayerId={currentPlayerId}
+          onStartRace={handleStartRace}
+          onLeaveRoom={handleLeaveRoom}
+        />
+      );
+    }
+    
+    if (multiplayerState === 'racing' && currentRoom) {
+      return (
+        <MultiplayerRace
+          room={currentRoom}
+          currentPlayerId={currentPlayerId}
+          onRaceComplete={handleRaceComplete}
+        />
+      );
+    }
+    
+    if (multiplayerState === 'results' && currentRoom) {
+      return (
+        <RaceResults
+          room={currentRoom}
+          currentPlayerId={currentPlayerId}
+          onNewRace={handleNewMultiplayerRace}
+          onBackToMenu={() => setGameMode('single')}
+        />
+      );
+    }
+  }
+
   if (showResults && currentResult) {
     return (
       <Results
@@ -217,6 +394,13 @@ useEffect(() => {
         <p className="text-gray-400">Test your typing speed and accuracy</p>
         
         <div className="flex justify-center gap-4 mt-4">
+          <button
+            onClick={() => setGameMode('multiplayer')}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <Users className="w-4 h-4" />
+            Multiplayer
+          </button>
           <button
             onClick={() => setShowLeaderboard(!showLeaderboard)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
