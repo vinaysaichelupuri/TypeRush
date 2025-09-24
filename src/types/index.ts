@@ -17,3 +17,35 @@ export interface CharacterState {
   char: string;
   status: 'untyped' | 'correct' | 'incorrect' | 'current';
 }
+
+export interface Player {
+  id: string;
+  name: string;
+  progress: number; // characters typed correctly
+  wpm: number;
+  accuracy: number;
+  isFinished: boolean;
+  finishTime?: number;
+  joinedAt: number;
+}
+
+export interface RaceRoom {
+  id: string;
+  creatorId: string;
+  text: string;
+  status: 'waiting' | 'countdown' | 'racing' | 'finished';
+  players: { [playerId: string]: Player };
+  createdAt: number;
+  countdownStartedAt?: number;
+  startedAt?: number;
+  maxPlayers: number;
+}
+
+export interface RaceProgress {
+  playerId: string;
+  progress: number;
+  wpm: number;
+  accuracy: number;
+  isFinished: boolean;
+  timestamp: number;
+}
