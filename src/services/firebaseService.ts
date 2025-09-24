@@ -17,34 +17,38 @@ import { RaceRoom, Player, RaceProgress } from '../types';
 export class FirebaseService {
   // Create a new race room
   static async createRoom(creatorName: string, text: string, maxPlayers: number = 6): Promise<string> {
-    const creatorId = `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    const roomData: Omit<RaceRoom, 'id'> = {
-      creatorId,
-      text,
-      status: 'waiting',
-      players: {
-        [creatorId]: {
-          id: creatorId,
-          name: creatorName,
-          progress: 0,
-          wpm: 0,
-          accuracy: 100,
-          isFinished: false,
-          joinedAt: Date.now()
-        }
-      },
-      createdAt: Date.now(),
-      maxPlayers
-    };
+  const creatorId = `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  const roomData: Omit<RaceRoom, 'id'> = {
+    creatorId,
+    text,
+    status: 'waiting',
+    players: {
+      [creatorId]: {
+        id: creatorId,
+        name: creatorName,
+        progress: 0,
+        wpm: 0,
+        accuracy: 100,
+        isFinished: false,
+        joinedAt: Date.now()
+      }
+    },
+    createdAt: Date.now(),
+    maxPlayers
+  };
 
+  console.log("Room data to be created:", roomData); // <--- ADD THIS
+
+  try {
     const docRef = await addDoc(collection(db, 'races'), roomData);
-    
-    // Store the document ID in the document itself for easier access
     await updateDoc(docRef, { id: docRef.id });
-    
     return docRef.id;
+  } catch (err) {
+    console.error("Error in FirebaseService.createRoom:", err); // <--- ADD THIS
+    throw err;
   }
+}
 
   // Join an existing room
   static async joinRoom(roomId: string, playerName: string): Promise<string | null> {

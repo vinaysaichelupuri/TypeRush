@@ -1,39 +1,53 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, RotateCcw, Trophy, Settings, Users } from 'lucide-react';
-import { TypingStats, CharacterState, SessionResult } from '../types';
-import { generateRandomText, generateTextByDifficulty, generateTextByFocus, calculateWPM, calculateAccuracy } from '../ utils/textGenerator';
-import Statistics from './Statistics';
-import Results from './Results';
-import Leaderboard from './Leaderboard';
-import MultiplayerMenu from './MultiplayerMenu';
-import RoomLobby from './RoomLobby';
-import MultiplayerRace from './MultiplayerRace';
-import RaceResults from './RaceResults';
-import { FirebaseService } from '../services/firebaseService';
-import { RaceRoom } from '../types';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Play, RotateCcw, Trophy, Settings, Users } from "lucide-react";
+import { TypingStats, CharacterState, SessionResult } from "../types";
+import {
+  generateRandomText,
+  generateTextByDifficulty,
+  generateTextByFocus,
+  calculateWPM,
+  calculateAccuracy,
+} from "../ utils/textGenerator";
+import Statistics from "./Statistics";
+import Results from "./Results";
+import Leaderboard from "./Leaderboard";
+import MultiplayerMenu from "./MultiplayerMenu";
+import RoomLobby from "./RoomLobby";
+import MultiplayerRace from "./MultiplayerRace";
+import RaceResults from "./RaceResults";
+import { FirebaseService } from "../services/firebaseService";
+import { RaceRoom } from "../types";
 
 const TypingTest: React.FC = () => {
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [userInput, setUserInput] = useState('');
+  const [userInput, setUserInput] = useState("");
   const [isStarted, setIsStarted] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [showResults, setShowResults] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [currentResult, setCurrentResult] = useState<SessionResult | null>(null);
+  const [currentResult, setCurrentResult] = useState<SessionResult | null>(
+    null
+  );
   const [savedResults, setSavedResults] = useState<SessionResult[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
-  const [focus, setFocus] = useState<'speed' | 'accuracy' | 'programming' | 'random'>('random');
-  
+  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">(
+    "medium"
+  );
+  const [focus, setFocus] = useState<
+    "speed" | "accuracy" | "programming" | "random"
+  >("random");
+
   // Multiplayer states
-  const [gameMode, setGameMode] = useState<'single' | 'multiplayer'>('single');
-  const [multiplayerState, setMultiplayerState] = useState<'menu' | 'lobby' | 'racing' | 'results'>('menu');
+  const [gameMode, setGameMode] = useState<"single" | "multiplayer">("single");
+  const [multiplayerState, setMultiplayerState] = useState<
+    "menu" | "lobby" | "racing" | "results"
+  >("menu");
   const [currentRoom, setCurrentRoom] = useState<RaceRoom | null>(null);
-  const [currentPlayerId, setCurrentPlayerId] = useState<string>('');
-  const [multiplayerError, setMultiplayerError] = useState<string>('');
+  const [currentPlayerId, setCurrentPlayerId] = useState<string>("");
+  const [multiplayerError, setMultiplayerError] = useState<string>("");
   const [isMultiplayerLoading, setIsMultiplayerLoading] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -51,7 +65,7 @@ const TypingTest: React.FC = () => {
 
   // Load saved results from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('typingResults');
+    const saved = localStorage.getItem("typingResults");
     if (saved) {
       setSavedResults(JSON.parse(saved));
     }
@@ -72,8 +86,8 @@ const TypingTest: React.FC = () => {
   }, [difficulty, focus]);
 
   const generateNewText = () => {
-    let newText = '';
-    if (focus === 'random') {
+    let newText = "";
+    if (focus === "random") {
       newText = generateTextByDifficulty(difficulty);
     } else {
       newText = generateTextByFocus(focus);
@@ -103,7 +117,7 @@ const TypingTest: React.FC = () => {
 
   // Calculate stats
   useEffect(() => {
-    const correctChars = userInput.split('').reduce((acc, char, index) => {
+    const correctChars = userInput.split("").reduce((acc, char, index) => {
       return acc + (char === text[index] ? 1 : 0);
     }, 0);
 
@@ -126,7 +140,7 @@ const TypingTest: React.FC = () => {
     if (userInput.length === text.length && text.length > 0) {
       setIsFinished(true);
       setIsStarted(false);
-      
+
       const result: SessionResult = {
         ...stats,
         id: Date.now().toString(),
@@ -135,19 +149,19 @@ const TypingTest: React.FC = () => {
       };
 
       setCurrentResult(result);
-      
+
       // Save result
       const newResults = [...savedResults, result];
       setSavedResults(newResults);
-      localStorage.setItem('typingResults', JSON.stringify(newResults));
-      
+      localStorage.setItem("typingResults", JSON.stringify(newResults));
+
       setTimeout(() => setShowResults(true), 500);
     }
   }, [userInput, text, stats, savedResults]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    
+
     // Prevent input beyond text length
     if (value.length > text.length) return;
 
@@ -164,14 +178,14 @@ const TypingTest: React.FC = () => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // Prevent common shortcuts that could interfere
     if (e.ctrlKey || e.metaKey) {
-      if (e.key === 'v' || e.key === 'a' || e.key === 'c') {
+      if (e.key === "v" || e.key === "a" || e.key === "c") {
         e.preventDefault();
       }
     }
   };
 
   const resetTest = useCallback(() => {
-    setUserInput('');
+    setUserInput("");
     setCurrentIndex(0);
     setIsStarted(false);
     setIsFinished(false);
@@ -192,29 +206,37 @@ const TypingTest: React.FC = () => {
   // Multiplayer functions
   const handleCreateRoom = async (playerName: string) => {
     setIsMultiplayerLoading(true);
-    setMultiplayerError('');
-    
+    setMultiplayerError("");
+
     try {
-      const newText = focus === 'random' ? generateTextByDifficulty(difficulty) : generateTextByFocus(focus);
+      const newText =
+        focus === "random"
+          ? generateTextByDifficulty(difficulty)
+          : generateTextByFocus(focus);
       const roomId = await FirebaseService.createRoom(playerName, newText);
-      
+
       // Subscribe to room updates
-      unsubscribeRef.current = FirebaseService.subscribeToRoom(roomId, (room) => {
-        if (room) {
-          setCurrentRoom(room);
-          setCurrentPlayerId(room.creatorId);
-          
-          if (room.status === 'racing' && multiplayerState === 'lobby') {
-            setMultiplayerState('racing');
-          } else if (room.status === 'finished') {
-            setMultiplayerState('results');
+      unsubscribeRef.current = FirebaseService.subscribeToRoom(
+        roomId,
+        (room) => {
+          if (room) {
+            setCurrentRoom(room);
+            setCurrentPlayerId(room.creatorId);
+
+            if (room.status === "racing" && multiplayerState === "lobby") {
+              setMultiplayerState("racing");
+            } else if (room.status === "finished") {
+              setMultiplayerState("results");
+            }
           }
         }
-      });
-      
-      setMultiplayerState('lobby');
+      );
+
+      setMultiplayerState("lobby");
     } catch (error) {
-      setMultiplayerError(error instanceof Error ? error.message : 'Failed to create room');
+      setMultiplayerError(
+        error instanceof Error ? error.message : "Failed to create room"
+      );
     } finally {
       setIsMultiplayerLoading(false);
     }
@@ -222,44 +244,57 @@ const TypingTest: React.FC = () => {
 
   const handleJoinRoom = async (roomId: string, playerName: string) => {
     setIsMultiplayerLoading(true);
-    setMultiplayerError('');
-    
+    setMultiplayerError("");
+
     try {
-      console.log('Attempting to join room:', roomId);
-      
+      console.log("Attempting to join room:", roomId);
+
       // First check if room exists
       const roomExists = await FirebaseService.roomExists(roomId);
       if (!roomExists) {
-        throw new Error('Room not found. Please check the room ID and try again.');
+        throw new Error(
+          "Room not found. Please check the room ID and try again."
+        );
       }
-      
+
       const playerId = await FirebaseService.joinRoom(roomId, playerName);
-      
+
       if (playerId) {
         setCurrentPlayerId(playerId);
-        
+
         // Subscribe to room updates
-        unsubscribeRef.current = FirebaseService.subscribeToRoom(roomId, (room) => {
-          if (room) {
-            setCurrentRoom(room);
-            
-            if (room.status === 'countdown' && multiplayerState === 'lobby') {
-              // Stay in lobby during countdown
-            } else if (room.status === 'racing' && multiplayerState === 'lobby') {
-              // Stay in lobby during countdown
-            } else if (room.status === 'racing' && multiplayerState === 'lobby') {
-              setMultiplayerState('racing');
-            } else if (room.status === 'finished') {
-              setMultiplayerState('results');
+        unsubscribeRef.current = FirebaseService.subscribeToRoom(
+          roomId,
+          (room) => {
+            if (room) {
+              setCurrentRoom(room);
+
+              if (room.status === "countdown" && multiplayerState === "lobby") {
+                // Stay in lobby during countdown
+              } else if (
+                room.status === "racing" &&
+                multiplayerState === "lobby"
+              ) {
+                // Stay in lobby during countdown
+              } else if (
+                room.status === "racing" &&
+                multiplayerState === "lobby"
+              ) {
+                setMultiplayerState("racing");
+              } else if (room.status === "finished") {
+                setMultiplayerState("results");
+              }
             }
           }
-        });
-        
-        setMultiplayerState('lobby');
+        );
+
+        setMultiplayerState("lobby");
       }
     } catch (error) {
-      console.error('Error joining room:', error);
-      setMultiplayerError(error instanceof Error ? error.message : 'Failed to join room');
+      console.error("Error joining room:", error);
+      setMultiplayerError(
+        error instanceof Error ? error.message : "Failed to join room"
+      );
     } finally {
       setIsMultiplayerLoading(false);
     }
@@ -267,11 +302,13 @@ const TypingTest: React.FC = () => {
 
   const handleStartRace = async () => {
     if (!currentRoom || !currentPlayerId) return;
-    
+
     try {
       await FirebaseService.startRace(currentRoom.id);
     } catch (error) {
-      setMultiplayerError(error instanceof Error ? error.message : 'Failed to start race');
+      setMultiplayerError(
+        error instanceof Error ? error.message : "Failed to start race"
+      );
     }
   };
 
@@ -280,23 +317,23 @@ const TypingTest: React.FC = () => {
       try {
         await FirebaseService.leaveRoom(currentRoom.id, currentPlayerId);
       } catch (error) {
-        console.error('Error leaving room:', error);
+        console.error("Error leaving room:", error);
       }
     }
-    
+
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
       unsubscribeRef.current = null;
     }
-    
+
     setCurrentRoom(null);
-    setCurrentPlayerId('');
-    setMultiplayerState('menu');
-    setGameMode('single');
+    setCurrentPlayerId("");
+    setMultiplayerState("menu");
+    setGameMode("single");
   };
 
   const handleRaceComplete = () => {
-    setMultiplayerState('results');
+    setMultiplayerState("results");
   };
 
   const handleNewMultiplayerRace = () => {
@@ -304,56 +341,59 @@ const TypingTest: React.FC = () => {
   };
 
   const getCharacterStates = (): CharacterState[] => {
-    return text.split('').map((char, index) => {
+    return text.split("").map((char, index) => {
       if (index < userInput.length) {
         return {
           char,
-          status: userInput[index] === char ? 'correct' : 'incorrect',
+          status: userInput[index] === char ? "correct" : "incorrect",
         };
       } else if (index === currentIndex) {
         return {
           char,
-          status: 'current',
+          status: "current",
         };
       } else {
         return {
           char,
-          status: 'untyped',
+          status: "untyped",
         };
       }
     });
   };
 
-  const personalBest = savedResults.length > 0 
-    ? savedResults.reduce((best, current) => current.wpm > best.wpm ? current : best)
-    : undefined;
+  const personalBest =
+    savedResults.length > 0
+      ? savedResults.reduce((best, current) =>
+          current.wpm > best.wpm ? current : best
+        )
+      : undefined;
 
   // Render multiplayer components
-  if (gameMode === 'multiplayer') {
-    if (multiplayerState === 'menu') {
+  if (gameMode === "multiplayer") {
+    if (multiplayerState === "menu") {
       return (
         <MultiplayerMenu
           onCreateRoom={handleCreateRoom}
           onJoinRoom={handleJoinRoom}
-          onBackToSinglePlayer={() => setGameMode('single')}
+          onBackToSinglePlayer={() => setGameMode("single")}
           isLoading={isMultiplayerLoading}
           error={multiplayerError}
         />
       );
     }
-    
-    if (multiplayerState === 'lobby' && currentRoom) {
+
+    if (multiplayerState === "lobby" && currentRoom) {
       return (
         <RoomLobby
           room={currentRoom}
           currentPlayerId={currentPlayerId}
-          onStartRace={handleStartRace}
+          onStartRace={() => setMultiplayerState("racing")}
           onLeaveRoom={handleLeaveRoom}
         />
       );
     }
-    
-    if (multiplayerState === 'racing' && currentRoom) {
+
+    if (multiplayerState === "racing" && currentRoom) {
       return (
         <MultiplayerRace
           room={currentRoom}
@@ -362,14 +402,14 @@ const TypingTest: React.FC = () => {
         />
       );
     }
-    
-    if (multiplayerState === 'results' && currentRoom) {
+
+    if (multiplayerState === "results" && currentRoom) {
       return (
         <RaceResults
           room={currentRoom}
           currentPlayerId={currentPlayerId}
           onNewRace={handleNewMultiplayerRace}
-          onBackToMenu={() => setGameMode('single')}
+          onBackToMenu={() => setGameMode("single")}
         />
       );
     }
@@ -390,12 +430,14 @@ const TypingTest: React.FC = () => {
     <div className="max-w-4xl mx-auto">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-white mb-2">Typing Speed Test</h1>
+        <h1 className="text-4xl font-bold text-white mb-2">
+          Typing Speed Test
+        </h1>
         <p className="text-gray-400">Test your typing speed and accuracy</p>
-        
+
         <div className="flex justify-center gap-4 mt-4">
           <button
-            onClick={() => setGameMode('multiplayer')}
+            onClick={() => setGameMode("multiplayer")}
             className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             <Users className="w-4 h-4" />
@@ -404,9 +446,9 @@ const TypingTest: React.FC = () => {
           <button
             onClick={() => setShowLeaderboard(!showLeaderboard)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              showLeaderboard 
-                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                : 'bg-gray-800 hover:bg-gray-700 text-white'
+              showLeaderboard
+                ? "bg-blue-600 hover:bg-blue-700 text-white"
+                : "bg-gray-800 hover:bg-gray-700 text-white"
             }`}
           >
             <Trophy className="w-4 h-4" />
@@ -415,9 +457,9 @@ const TypingTest: React.FC = () => {
           <button
             onClick={() => setShowSettings(!showSettings)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              showSettings 
-                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                : 'bg-gray-800 hover:bg-gray-700 text-white'
+              showSettings
+                ? "bg-blue-600 hover:bg-blue-700 text-white"
+                : "bg-gray-800 hover:bg-gray-700 text-white"
             }`}
           >
             <Settings className="w-4 h-4" />
@@ -428,13 +470,19 @@ const TypingTest: React.FC = () => {
 
       {showSettings && (
         <div className="mb-8 bg-gray-900 rounded-xl p-6 border border-gray-800">
-          <h2 className="text-xl font-bold text-white mb-4">Text Generation Settings</h2>
+          <h2 className="text-xl font-bold text-white mb-4">
+            Text Generation Settings
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-gray-300 font-semibold mb-2">Difficulty Level</label>
+              <label className="block text-gray-300 font-semibold mb-2">
+                Difficulty Level
+              </label>
               <select
                 value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value as 'easy' | 'medium' | 'hard')}
+                onChange={(e) =>
+                  setDifficulty(e.target.value as "easy" | "medium" | "hard")
+                }
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
               >
                 <option value="easy">Easy (150-250 chars)</option>
@@ -443,10 +491,20 @@ const TypingTest: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-gray-300 font-semibold mb-2">Focus Area</label>
+              <label className="block text-gray-300 font-semibold mb-2">
+                Focus Area
+              </label>
               <select
                 value={focus}
-                onChange={(e) => setFocus(e.target.value as 'speed' | 'accuracy' | 'programming' | 'random')}
+                onChange={(e) =>
+                  setFocus(
+                    e.target.value as
+                      | "speed"
+                      | "accuracy"
+                      | "programming"
+                      | "random"
+                  )
+                }
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
               >
                 <option value="random">Random Topics</option>
@@ -457,10 +515,22 @@ const TypingTest: React.FC = () => {
             </div>
           </div>
           <div className="mt-4 text-sm text-gray-400">
-            <p><strong>Random Topics:</strong> Varied content including literature, science, business, and technology</p>
-            <p><strong>Speed Training:</strong> Simple, repetitive patterns to build typing speed</p>
-            <p><strong>Accuracy Training:</strong> Complex punctuation and challenging vocabulary</p>
-            <p><strong>Programming Terms:</strong> Code-related vocabulary and technical terms</p>
+            <p>
+              <strong>Random Topics:</strong> Varied content including
+              literature, science, business, and technology
+            </p>
+            <p>
+              <strong>Speed Training:</strong> Simple, repetitive patterns to
+              build typing speed
+            </p>
+            <p>
+              <strong>Accuracy Training:</strong> Complex punctuation and
+              challenging vocabulary
+            </p>
+            <p>
+              <strong>Programming Terms:</strong> Code-related vocabulary and
+              technical terms
+            </p>
           </div>
         </div>
       )}
@@ -482,14 +552,18 @@ const TypingTest: React.FC = () => {
             <span
               key={index}
               className={`${
-                charState.status === 'correct'
-                  ? 'text-gray-400 bg-green-900/30'
-                  : charState.status === 'incorrect'
-                  ? 'text-white bg-red-600/60'
-                  : charState.status === 'current'
-                  ? 'text-white bg-blue-600 animate-pulse'
-                  : 'text-gray-500'
-              } ${charState.status === 'current' ? 'border-l-2 border-blue-400' : ''}`}
+                charState.status === "correct"
+                  ? "text-gray-400 bg-green-900/30"
+                  : charState.status === "incorrect"
+                  ? "text-white bg-red-600/60"
+                  : charState.status === "current"
+                  ? "text-white bg-blue-600 animate-pulse"
+                  : "text-gray-500"
+              } ${
+                charState.status === "current"
+                  ? "border-l-2 border-blue-400"
+                  : ""
+              }`}
             >
               {charState.char}
             </span>
@@ -503,13 +577,13 @@ const TypingTest: React.FC = () => {
           <Play className="w-5 h-5 text-blue-400" />
           <span className="text-white font-semibold">
             {!isStarted && userInput.length === 0
-              ? 'Start typing to begin the test'
+              ? "Start typing to begin the test"
               : isFinished
-              ? 'Test completed!'
-              : 'Keep typing...'}
+              ? "Test completed!"
+              : "Keep typing..."}
           </span>
         </div>
-        
+
         <input
           ref={inputRef}
           type="text"
