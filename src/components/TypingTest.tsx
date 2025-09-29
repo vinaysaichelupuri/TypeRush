@@ -116,20 +116,26 @@ const TypingTest: React.FC = () => {
   }, [isStarted, isFinished, startTime]);
 
   useEffect(() => {
-  if (!currentRoom) return;
-  
-  // Handle room status transitions
-  if (currentRoom.status === 'waiting' && multiplayerState === 'results') {
-    // When room goes back to waiting after restart, go to lobby
-    setMultiplayerState('lobby');
-  } else if (currentRoom.status === 'racing' && multiplayerState === 'lobby') {
-    // When race starts, go to racing view
-    setMultiplayerState('racing');
-  } else if (currentRoom.status === 'finished' && multiplayerState === 'racing') {
-    // When race finishes, show results
-    setMultiplayerState('results');
-  }
-}, [currentRoom?.status, multiplayerState]);
+    if (!currentRoom) return;
+
+    // Handle room status transitions
+    if (currentRoom.status === "waiting" && multiplayerState === "results") {
+      // When room goes back to waiting after restart, go to lobby
+      setMultiplayerState("lobby");
+    } else if (
+      currentRoom.status === "racing" &&
+      multiplayerState === "lobby"
+    ) {
+      // When race starts, go to racing view
+      setMultiplayerState("racing");
+    } else if (
+      currentRoom.status === "finished" &&
+      multiplayerState === "racing"
+    ) {
+      // When race finishes, show results
+      setMultiplayerState("results");
+    }
+  }, [currentRoom?.status, multiplayerState]);
 
   // Calculate stats
   useEffect(() => {
@@ -328,49 +334,62 @@ const TypingTest: React.FC = () => {
     }
   };
 
-  const handleLeaveRoom = async () => {
-    if (currentRoom && currentPlayerId) {
-      try {
-        await FirebaseService.leaveRoom(currentRoom.id, currentPlayerId);
-      } catch (error) {
-        console.error("Error leaving room:", error);
-      }
-    }
+const handleLeaveRoom = async () => {
+  // First, unsubscribe from Firebase to prevent further updates
+  if (unsubscribeRef.current) {
+    unsubscribeRef.current();
+    unsubscribeRef.current = null;
+  }
 
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-      unsubscribeRef.current = null;
+  // Leave the room in Firebase (if connected)
+  if (currentRoom && currentPlayerId) {
+    try {
+      await FirebaseService.leaveRoom(currentRoom.id, currentPlayerId);
+    } catch (error) {
+      console.error("Error leaving room:", error);
     }
+  }
 
-    setCurrentRoom(null);
-    setCurrentPlayerId("");
-    setMultiplayerState("menu");
-    setGameMode("single");
-  };
+  // Reset ALL multiplayer state BEFORE changing game mode
+  setCurrentRoom(null);
+  setCurrentPlayerId("");
+  setMultiplayerState("menu");
+  setMultiplayerError("");
+  setIsMultiplayerLoading(false);
+  
+  
+  // THEN change game mode
+  setGameMode("single");
+};
+  console.log('Current state:', { 
+  gameMode, 
+  multiplayerState, 
+  hasRoom: !!currentRoom,
+  roomId: currentRoom?.id 
+});
 
   const handleRaceComplete = () => {
     setMultiplayerState("results");
   };
 
-const handleNewMultiplayerRace = async () => {
-  if (!currentRoom) return;
+  const handleNewMultiplayerRace = async () => {
+    if (!currentRoom) return;
 
-  if (currentPlayerId === currentRoom.creatorId) {
-    const newText =
-      focus === "random"
-        ? generateTextByDifficulty(difficulty)
-        : generateTextByFocus(focus);
+    if (currentPlayerId === currentRoom.creatorId) {
+      const newText =
+        focus === "random"
+          ? generateTextByDifficulty(difficulty)
+          : generateTextByFocus(focus);
 
-    try {
-      await FirebaseService.restartRace(currentRoom.id, newText);
-    } catch (error) {
-      console.error("Failed to restart race:", error);
+      try {
+        await FirebaseService.restartRace(currentRoom.id, newText);
+      } catch (error) {
+        console.error("Failed to restart race:", error);
+      }
     }
-  }
 
-  setMultiplayerState("lobby");
-};
-
+    setMultiplayerState("lobby");
+  };
 
   const getCharacterStates = (): CharacterState[] => {
     return text.split("").map((char, index) => {
@@ -441,7 +460,7 @@ const handleNewMultiplayerRace = async () => {
           room={currentRoom}
           currentPlayerId={currentPlayerId}
           onNewRace={handleNewMultiplayerRace}
-          onBackToMenu={() => setGameMode("single")}
+          onBackToMenu={handleLeaveRoom}
         />
       );
     }

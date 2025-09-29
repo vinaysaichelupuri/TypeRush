@@ -327,10 +327,10 @@ const RaceResults: React.FC<RaceResultsProps> = ({
       <div className="flex justify-center gap-4">
         <button
           onClick={onBackToMenu}
-          className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
         >
           <Home className="w-4 h-4" />
-          Back to Menu
+          Leave Room
         </button>
       </div>
     </div>
