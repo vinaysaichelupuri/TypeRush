@@ -115,6 +115,22 @@ const TypingTest: React.FC = () => {
     };
   }, [isStarted, isFinished, startTime]);
 
+  useEffect(() => {
+  if (!currentRoom) return;
+  
+  // Handle room status transitions
+  if (currentRoom.status === 'waiting' && multiplayerState === 'results') {
+    // When room goes back to waiting after restart, go to lobby
+    setMultiplayerState('lobby');
+  } else if (currentRoom.status === 'racing' && multiplayerState === 'lobby') {
+    // When race starts, go to racing view
+    setMultiplayerState('racing');
+  } else if (currentRoom.status === 'finished' && multiplayerState === 'racing') {
+    // When race finishes, show results
+    setMultiplayerState('results');
+  }
+}, [currentRoom?.status, multiplayerState]);
+
   // Calculate stats
   useEffect(() => {
     const correctChars = userInput.split("").reduce((acc, char, index) => {
@@ -336,9 +352,25 @@ const TypingTest: React.FC = () => {
     setMultiplayerState("results");
   };
 
-  const handleNewMultiplayerRace = () => {
-    handleLeaveRoom();
-  };
+const handleNewMultiplayerRace = async () => {
+  if (!currentRoom) return;
+
+  if (currentPlayerId === currentRoom.creatorId) {
+    const newText =
+      focus === "random"
+        ? generateTextByDifficulty(difficulty)
+        : generateTextByFocus(focus);
+
+    try {
+      await FirebaseService.restartRace(currentRoom.id, newText);
+    } catch (error) {
+      console.error("Failed to restart race:", error);
+    }
+  }
+
+  setMultiplayerState("lobby");
+};
+
 
   const getCharacterStates = (): CharacterState[] => {
     return text.split("").map((char, index) => {
