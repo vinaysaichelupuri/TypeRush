@@ -38,7 +38,7 @@ export class FirebaseService {
     maxPlayers
   };
 
-  console.log("Room data to be created:", roomData); // <--- ADD THIS
+
 
   try {
     const docRef = await addDoc(collection(db, 'races'), roomData);
@@ -49,6 +49,38 @@ export class FirebaseService {
     throw err;
   }
 }
+
+  static async setPlayerReady(roomId: string, playerId: string, isReady: boolean): Promise<void> {
+    const roomRef = doc(db, 'races', roomId);
+    await updateDoc(roomRef, {
+      [`players.${playerId}.isReady`]: isReady
+    });
+  }
+
+  // Creator starts a new race after everyone is ready
+  static async restartRace(roomId: string, selectedText: string): Promise<void> {
+    const roomRef = doc(db, 'races', roomId);
+    // Reset all players' progress, isFinished, isReady
+    const roomSnap = await getDoc(roomRef);
+    if (!roomSnap.exists()) throw new Error('Room not found');
+    const roomData = roomSnap.data() as RaceRoom;
+    const updates: any = {};
+    Object.keys(roomData.players).forEach(pid => {
+      updates[`players.${pid}.progress`] = 0;
+      updates[`players.${pid}.wpm`] = 0;
+      updates[`players.${pid}.accuracy`] = 100;
+      updates[`players.${pid}.isFinished`] = false;
+      updates[`players.${pid}.isReady`] = false;
+      updates[`players.${pid}.finishTime`] = null;
+    });
+    await updateDoc(roomRef, {
+      ...updates,
+      status: 'waiting',
+      text: selectedText,
+      countdownStartedAt: null,
+      startedAt: null
+    });
+  }
 
   // Join an existing room
   static async joinRoom(roomId: string, playerName: string): Promise<string | null> {

@@ -27,18 +27,20 @@ export interface Player {
   isFinished: boolean;
   finishTime?: number;
   joinedAt: number;
+  isReady?: boolean; 
 }
 
 export interface RaceRoom {
   id: string;
   creatorId: string;
   text: string;
-  status: 'waiting' | 'countdown' | 'racing' | 'finished';
+  status: 'waiting' | 'countdown' | 'racing' | 'finished' | 'restart';
   players: { [playerId: string]: Player };
   createdAt: number;
   countdownStartedAt?: number;
   startedAt?: number;
   maxPlayers: number;
+  selectedText?: string;
 }
 
 export interface RaceProgress {

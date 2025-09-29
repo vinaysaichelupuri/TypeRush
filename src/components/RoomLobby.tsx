@@ -32,16 +32,16 @@ const RoomLobby: React.FC<RoomLobbyProps> = ({
     }
   };
 
-  const handleStartRace = async () => {
-    if (!isCreator || playerCount < 2) return;
-    
-    // Update room status to start countdown
-    try {
-      await FirebaseService.startCountdown(room.id, currentPlayerId);
-    } catch (error) {
-      console.error('Failed to start countdown:', error);
-    }
-  };
+const handleStartRace = async () => {
+  if (!isCreator || playerCount < 2) return;
+
+  try {
+    await FirebaseService.startCountdown(room.id, currentPlayerId);
+  } catch (error) {
+    console.error('Failed to start countdown:', error);
+  }
+};
+
 
   const getPlayerStatus = (player: Player) => {
     if (player.id === room.creatorId) {
