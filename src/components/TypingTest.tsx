@@ -372,24 +372,21 @@ const handleLeaveRoom = async () => {
     setMultiplayerState("results");
   };
 
-  const handleNewMultiplayerRace = async () => {
-    if (!currentRoom) return;
-
-    if (currentPlayerId === currentRoom.creatorId) {
-      const newText =
-        focus === "random"
-          ? generateTextByDifficulty(difficulty)
-          : generateTextByFocus(focus);
-
-      try {
-        await FirebaseService.restartRace(currentRoom.id, newText);
-      } catch (error) {
-        console.error("Failed to restart race:", error);
-      }
+const handleNewMultiplayerRace = async () => {
+  if (!currentRoom) return;
+  if (currentPlayerId === currentRoom.creatorId) {
+    const newText =
+      focus === "random"
+        ? generateTextByDifficulty(difficulty)
+        : generateTextByFocus(focus);
+    try {
+      await FirebaseService.restartRace(currentRoom.id, newText);
+    } catch (error) {
+      console.error("Failed to restart race:", error);
     }
-
-    setMultiplayerState("lobby");
-  };
+  }
+  setMultiplayerState("lobby");
+};
 
   const getCharacterStates = (): CharacterState[] => {
     return text.split("").map((char, index) => {
