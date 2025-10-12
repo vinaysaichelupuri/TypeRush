@@ -41,6 +41,8 @@ export interface RaceRoom {
   startedAt?: number;
   maxPlayers: number;
   selectedText?: string;
+  focus?: string;
+  difficulty?: string;
 }
 
 export interface RaceProgress {
