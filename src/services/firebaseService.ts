@@ -5,10 +5,6 @@ import {
   updateDoc, 
   getDoc, 
   onSnapshot, 
-  query, 
-  where, 
-  orderBy,
-  serverTimestamp,
   deleteField
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -58,10 +54,11 @@ export class FirebaseService {
   }
 
   // Creator starts a new race after everyone is ready
-  static async restartRace(roomId: string, selectedText: string): Promise<void> {
+  static async restartRace(roomId: string, newText: string): Promise<void> {
+    // Update the room document with the new text and reset relevant fields
     const roomRef = doc(db, 'races', roomId);
-    // Reset all players' progress, isFinished, isReady
-    const roomSnap = await getDoc(roomRef);
+
+const roomSnap = await getDoc(roomRef);
     if (!roomSnap.exists()) throw new Error('Room not found');
     const roomData = roomSnap.data() as RaceRoom;
     const updates: any = {};
@@ -75,10 +72,11 @@ export class FirebaseService {
     });
     await updateDoc(roomRef, {
       ...updates,
+      text: newText,
       status: 'waiting',
-      text: selectedText,
       countdownStartedAt: null,
       startedAt: null
+    
     });
   }
 
