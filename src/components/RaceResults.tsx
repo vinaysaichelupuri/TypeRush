@@ -9,8 +9,9 @@ import {
   RotateCcw,
   Home,
 } from "lucide-react";
-import { RaceRoom, Player } from "../types";
+import { RaceRoom } from "../types";
 import { FirebaseService } from "../services/firebaseService";
+import { generateText } from "../ utils/textGenerator";
 
 interface RaceResultsProps {
   room: RaceRoom;
@@ -22,7 +23,6 @@ interface RaceResultsProps {
 const RaceResults: React.FC<RaceResultsProps> = ({
   room,
   currentPlayerId,
-  onNewRace,
   onBackToMenu,
 }) => {
   const players = Object.values(room.players)
@@ -46,10 +46,15 @@ const RaceResults: React.FC<RaceResultsProps> = ({
   const handleStartNewRace = async () => {
     // Only creator can start, and only when all other players are ready
     if (!isCreator || !allMembersReady) return;
-    
-    const selectedText = room.selectedText || room.text;
-    await FirebaseService.restartRace(room.id, selectedText);
+
+    // Generate a new text for the new race
+    const newText = generateText(
+      (room.difficulty || 'easy') as 'easy' | 'medium' | 'hard',
+      (room.focus || 'general') as 'speed' | 'accuracy' | 'programming' | 'general'
+    );
+    await FirebaseService.restartRace(room.id, newText);
     // Don't call onNewRace() here - let the Firebase listener handle the transition
+
   };
 
   const currentPlayer = room.players[currentPlayerId];

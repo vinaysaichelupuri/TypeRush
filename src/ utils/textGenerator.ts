@@ -204,3 +204,31 @@ export const calculateAccuracy = (correct: number, incorrect: number): number =>
   if (total === 0) return 100;
   return Math.round((correct / total) * 100);
 };
+
+/**
+ * Generates a random text based on difficulty and focus.
+ * Uses your existing generators for best results.
+ */
+export function generateText(
+  difficulty: 'easy' | 'medium' | 'hard' = 'easy',
+  focus: 'speed' | 'accuracy' | 'programming' | 'general' = 'general'
+): string {
+  // If focus is programming, always use programming generator
+  if (focus === 'programming') {
+    return generateProgrammingText(
+      difficulty === 'easy' ? 200 : difficulty === 'medium' ? 300 : 400
+    );
+  }
+  if (focus === 'speed') {
+    // For speed, use simple sentences, length based on difficulty
+    const sentenceCount = difficulty === 'easy' ? 6 : difficulty === 'medium' ? 10 : 14;
+    return lorem.generateSentences(sentenceCount);
+  }
+  if (focus === 'accuracy') {
+    // For accuracy, use literature topic with length based on difficulty
+    const length = difficulty === 'easy' ? 200 : difficulty === 'medium' ? 300 : 400;
+    return generateTopicText('literature', length);
+  }
+  // Default/general: use difficulty-based generator
+  return generateTextByDifficulty(difficulty);
+}
