@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Trophy, Users, Zap, Target } from 'lucide-react';
 import { RaceRoom, Player, CharacterState, RaceProgress } from '../types';
 import { FirebaseService } from '../services/firebaseService';
-import { calculateWPM, calculateAccuracy } from '../ utils/textGenerator';
+import { calculateWPM, calculateAccuracy } from '../utils/textGenerator';
 
 interface MultiplayerRaceProps {
   room: RaceRoom;

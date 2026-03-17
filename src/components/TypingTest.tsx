@@ -7,7 +7,7 @@ import {
   generateTextByFocus,
   calculateWPM,
   calculateAccuracy,
-} from "../ utils/textGenerator";
+} from "../utils/textGenerator";
 import Statistics from "./Statistics";
 import Results from "./Results";
 import Leaderboard from "./Leaderboard";
@@ -29,16 +29,18 @@ const TypingTest: React.FC = () => {
   const [showResults, setShowResults] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [currentResult, setCurrentResult] = useState<SessionResult | null>(
-    null
+    null,
   );
   const [savedResults, setSavedResults] = useState<SessionResult[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">(
-    "medium"
+    "medium",
   );
   const [focus, setFocus] = useState<
     "speed" | "accuracy" | "programming" | "random"
   >("random");
+  const [isInputFocused, setIsInputFocused] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   // Multiplayer states
   const [gameMode, setGameMode] = useState<"single" | "multiplayer">("single");
@@ -51,6 +53,8 @@ const TypingTest: React.FC = () => {
   const [isMultiplayerLoading, setIsMultiplayerLoading] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const caretRef = useRef<HTMLDivElement>(null);
+  const charRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
@@ -62,6 +66,17 @@ const TypingTest: React.FC = () => {
     incorrectKeystrokes: 0,
     totalKeystrokes: 0,
   });
+
+  // Update caret position
+  useEffect(() => {
+    if (caretRef.current && charRefs.current[currentIndex]) {
+      const charEle = charRefs.current[currentIndex];
+      caretRef.current.style.left = `${charEle.offsetLeft}px`;
+      caretRef.current.style.top = `${charEle.offsetTop}px`;
+      caretRef.current.style.width = `${charEle.offsetWidth}px`;
+      caretRef.current.style.height = `${charEle.offsetHeight}px`;
+    }
+  }, [currentIndex, text]);
 
   // Load saved results from localStorage
   useEffect(() => {
@@ -93,6 +108,7 @@ const TypingTest: React.FC = () => {
       newText = generateTextByFocus(focus);
     }
     setText(newText);
+    charRefs.current = new Array(newText.length).fill(null);
   };
 
   // Timer effect
@@ -120,19 +136,16 @@ const TypingTest: React.FC = () => {
 
     // Handle room status transitions
     if (currentRoom.status === "waiting" && multiplayerState === "results") {
-      // When room goes back to waiting after restart, go to lobby
       setMultiplayerState("lobby");
     } else if (
       currentRoom.status === "racing" &&
       multiplayerState === "lobby"
     ) {
-      // When race starts, go to racing view
       setMultiplayerState("racing");
     } else if (
       currentRoom.status === "finished" &&
       multiplayerState === "racing"
     ) {
-      // When race finishes, show results
       setMultiplayerState("results");
     }
   }, [currentRoom?.status, multiplayerState]);
@@ -159,7 +172,7 @@ const TypingTest: React.FC = () => {
 
   // Check if test is complete
   useEffect(() => {
-    if (userInput.length === text.length && text.length > 0) {
+    if (userInput.length === text.length && text.length > 0 && !isFinished) {
       setIsFinished(true);
       setIsStarted(false);
 
@@ -172,14 +185,16 @@ const TypingTest: React.FC = () => {
 
       setCurrentResult(result);
 
-      // Save result
-      const newResults = [...savedResults, result];
-      setSavedResults(newResults);
-      localStorage.setItem("typingResults", JSON.stringify(newResults));
+      // Save result using functional update to avoid dependency on savedResults
+      setSavedResults((prev) => {
+        const newResults = [...prev, result];
+        localStorage.setItem("typingResults", JSON.stringify(newResults));
+        return newResults;
+      });
 
       setTimeout(() => setShowResults(true), 500);
     }
-  }, [userInput, text, stats, savedResults]);
+  }, [userInput, text, stats, isFinished]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -193,12 +208,20 @@ const TypingTest: React.FC = () => {
       setStartTime(Date.now());
     }
 
+    // Error detection for shake effect
+    const lastCharTyped = value[value.length - 1];
+    const expectedChar = text[value.length - 1];
+
+    if (value.length > userInput.length && lastCharTyped !== expectedChar) {
+      setHasError(true);
+      setTimeout(() => setHasError(false), 200);
+    }
+
     setUserInput(value);
     setCurrentIndex(value.length);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Prevent common shortcuts that could interfere
     if (e.ctrlKey || e.metaKey) {
       if (e.key === "v" || e.key === "a" || e.key === "c") {
         e.preventDefault();
@@ -237,7 +260,6 @@ const TypingTest: React.FC = () => {
           : generateTextByFocus(focus);
       const roomId = await FirebaseService.createRoom(playerName, newText);
 
-      // Subscribe to room updates
       unsubscribeRef.current = FirebaseService.subscribeToRoom(
         roomId,
         (room) => {
@@ -251,13 +273,13 @@ const TypingTest: React.FC = () => {
               setMultiplayerState("results");
             }
           }
-        }
+        },
       );
 
       setMultiplayerState("lobby");
     } catch (error) {
       setMultiplayerError(
-        error instanceof Error ? error.message : "Failed to create room"
+        error instanceof Error ? error.message : "Failed to create room",
       );
     } finally {
       setIsMultiplayerLoading(false);
@@ -269,13 +291,10 @@ const TypingTest: React.FC = () => {
     setMultiplayerError("");
 
     try {
-      console.log("Attempting to join room:", roomId);
-
-      // First check if room exists
       const roomExists = await FirebaseService.roomExists(roomId);
       if (!roomExists) {
         throw new Error(
-          "Room not found. Please check the room ID and try again."
+          "Room not found. Please check the room ID and try again.",
         );
       }
 
@@ -284,7 +303,6 @@ const TypingTest: React.FC = () => {
       if (playerId) {
         setCurrentPlayerId(playerId);
 
-        // Subscribe to room updates
         unsubscribeRef.current = FirebaseService.subscribeToRoom(
           roomId,
           (room) => {
@@ -292,12 +310,10 @@ const TypingTest: React.FC = () => {
               setCurrentRoom(room);
 
               if (room.status === "countdown" && multiplayerState === "lobby") {
-                // Stay in lobby during countdown
               } else if (
                 room.status === "racing" &&
                 multiplayerState === "lobby"
               ) {
-                // Stay in lobby during countdown
               } else if (
                 room.status === "racing" &&
                 multiplayerState === "lobby"
@@ -307,15 +323,14 @@ const TypingTest: React.FC = () => {
                 setMultiplayerState("results");
               }
             }
-          }
+          },
         );
 
         setMultiplayerState("lobby");
       }
     } catch (error) {
-      console.error("Error joining room:", error);
       setMultiplayerError(
-        error instanceof Error ? error.message : "Failed to join room"
+        error instanceof Error ? error.message : "Failed to join room",
       );
     } finally {
       setIsMultiplayerLoading(false);
@@ -324,49 +339,36 @@ const TypingTest: React.FC = () => {
 
   const handleStartRace = async () => {
     if (!currentRoom || !currentPlayerId) return;
-
     try {
       await FirebaseService.startRace(currentRoom.id);
     } catch (error) {
       setMultiplayerError(
-        error instanceof Error ? error.message : "Failed to start race"
+        error instanceof Error ? error.message : "Failed to start race",
       );
     }
   };
 
-const handleLeaveRoom = async () => {
-  // First, unsubscribe from Firebase to prevent further updates
-  if (unsubscribeRef.current) {
-    unsubscribeRef.current();
-    unsubscribeRef.current = null;
-  }
-
-  // Leave the room in Firebase (if connected)
-  if (currentRoom && currentPlayerId) {
-    try {
-      await FirebaseService.leaveRoom(currentRoom.id, currentPlayerId);
-    } catch (error) {
-      console.error("Error leaving room:", error);
+  const handleLeaveRoom = async () => {
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
     }
-  }
 
-  // Reset ALL multiplayer state BEFORE changing game mode
-  setCurrentRoom(null);
-  setCurrentPlayerId("");
-  setMultiplayerState("menu");
-  setMultiplayerError("");
-  setIsMultiplayerLoading(false);
-  
-  
-  // THEN change game mode
-  setGameMode("single");
-};
-  console.log('Current state:', { 
-  gameMode, 
-  multiplayerState, 
-  hasRoom: !!currentRoom,
-  roomId: currentRoom?.id 
-});
+    if (currentRoom && currentPlayerId) {
+      try {
+        await FirebaseService.leaveRoom(currentRoom.id, currentPlayerId);
+      } catch (error) {
+        console.error("Error leaving room:", error);
+      }
+    }
+
+    setCurrentRoom(null);
+    setCurrentPlayerId("");
+    setMultiplayerState("menu");
+    setMultiplayerError("");
+    setIsMultiplayerLoading(false);
+    setGameMode("single");
+  };
 
   const handleRaceComplete = () => {
     setMultiplayerState("results");
@@ -415,7 +417,7 @@ const handleLeaveRoom = async () => {
   const personalBest =
     savedResults.length > 0
       ? savedResults.reduce((best, current) =>
-          current.wpm > best.wpm ? current : best
+          current.wpm > best.wpm ? current : best,
         )
       : undefined;
 
@@ -468,171 +470,139 @@ const handleLeaveRoom = async () => {
 
   if (showResults && currentResult) {
     return (
-      <Results
-        result={currentResult}
-        onRestart={resetTest}
-        onNewTest={startNewTest}
-        personalBest={personalBest}
-      />
+      <div className="w-full h-full flex flex-col justify-center">
+        <Results
+          result={currentResult}
+          onRestart={resetTest}
+          onNewTest={startNewTest}
+          personalBest={personalBest}
+        />
+      </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-white mb-2">
-          Typing Speed Test
-        </h1>
-        <p className="text-gray-400">Test your typing speed and accuracy</p>
-
-        <div className="flex justify-center gap-4 mt-4">
+    <div className="w-full h-full flex flex-col justify-between">
+      {/* Header & Settings */}
+      <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4 shrink-0">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setGameMode("multiplayer")}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center gap-2 bg-[#161b22] hover:bg-[#21262d] text-white px-4 py-2 rounded-lg border border-gray-800 transition-colors"
           >
-            <Users className="w-4 h-4" />
-            Multiplayer
+            <Users className="w-4 h-4 text-blue-400" />
+            <span className="text-sm font-medium">Multiplayer</span>
           </button>
           <button
             onClick={() => setShowLeaderboard(!showLeaderboard)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition-colors ${
               showLeaderboard
-                ? "bg-blue-600 hover:bg-blue-700 text-white"
-                : "bg-gray-800 hover:bg-gray-700 text-white"
+                ? "bg-blue-600/10 border-blue-500/50 text-blue-400"
+                : "bg-[#161b22] border-gray-800 text-white hover:bg-[#21262d]"
             }`}
           >
             <Trophy className="w-4 h-4" />
-            Leaderboard
+            <span className="font-medium">Leaderboard</span>
           </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="bg-[#161b22] rounded-lg p-1 border border-gray-800 flex">
+            {["easy", "medium", "hard"].map((d) => (
+              <button
+                key={d}
+                onClick={() => setDifficulty(d as any)}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                  difficulty === d
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                {d.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            className={`p-2 rounded-lg border transition-colors ${
               showSettings
-                ? "bg-blue-600 hover:bg-blue-700 text-white"
-                : "bg-gray-800 hover:bg-gray-700 text-white"
+                ? "bg-blue-600/10 border-blue-500/50 text-blue-400"
+                : "bg-[#161b22] border-gray-800 text-white hover:bg-[#21262d]"
             }`}
           >
             <Settings className="w-4 h-4" />
-            Settings
           </button>
         </div>
       </div>
 
       {showSettings && (
-        <div className="mb-8 bg-gray-900 rounded-xl p-6 border border-gray-800">
-          <h2 className="text-xl font-bold text-white mb-4">
-            Text Generation Settings
+        <div className="mb-6 bg-[#161b22] rounded-xl p-4 border border-gray-800 animate-in fade-in duration-200">
+          <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+            Focus Area
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-gray-300 font-semibold mb-2">
-                Difficulty Level
-              </label>
-              <select
-                value={difficulty}
-                onChange={(e) =>
-                  setDifficulty(e.target.value as "easy" | "medium" | "hard")
-                }
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {["random", "speed", "accuracy", "programming"].map((f) => (
+              <button
+                key={f}
+                onClick={() => setFocus(f as any)}
+                className={`p-3 rounded-lg border text-left transition-colors ${
+                  focus === f
+                    ? "bg-blue-600/10 border-blue-500/50"
+                    : "bg-transparent border-gray-800 hover:bg-[#21262d]"
+                }`}
               >
-                <option value="easy">Easy (150-250 chars)</option>
-                <option value="medium">Medium (250-350 chars)</option>
-                <option value="hard">Hard (350-500 chars)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-gray-300 font-semibold mb-2">
-                Focus Area
-              </label>
-              <select
-                value={focus}
-                onChange={(e) =>
-                  setFocus(
-                    e.target.value as
-                      | "speed"
-                      | "accuracy"
-                      | "programming"
-                      | "random"
-                  )
-                }
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-              >
-                <option value="random">Random Topics</option>
-                <option value="speed">Speed Training</option>
-                <option value="accuracy">Accuracy Training</option>
-                <option value="programming">Programming Terms</option>
-              </select>
-            </div>
-          </div>
-          <div className="mt-4 text-sm text-gray-400">
-            <p>
-              <strong>Random Topics:</strong> Varied content including
-              literature, science, business, and technology
-            </p>
-            <p>
-              <strong>Speed Training:</strong> Simple, repetitive patterns to
-              build typing speed
-            </p>
-            <p>
-              <strong>Accuracy Training:</strong> Complex punctuation and
-              challenging vocabulary
-            </p>
-            <p>
-              <strong>Programming Terms:</strong> Code-related vocabulary and
-              technical terms
-            </p>
+                <div
+                  className={`text-xs font-bold ${focus === f ? "text-blue-400" : "text-white"}`}
+                >
+                  {f.toUpperCase()}
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       )}
 
       {showLeaderboard && (
-        <div className="mb-8 bg-gray-900 rounded-xl p-6 border border-gray-800">
-          <h2 className="text-xl font-bold text-white mb-4">Top Scores</h2>
+        <div className="mb-6 bg-[#161b22] rounded-xl p-4 border border-gray-800 max-h-[200px] overflow-y-auto">
           <Leaderboard results={savedResults} />
         </div>
       )}
 
-      {/* Statistics */}
-      <Statistics stats={stats} />
-
-      {/* Text Display */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-6 min-h-[200px]">
-        <div className="text-lg leading-relaxed font-mono">
-          {getCharacterStates().map((charState, index) => (
-            <span
-              key={index}
-              className={`${
-                charState.status === "correct"
-                  ? "text-gray-400 bg-green-900/30"
-                  : charState.status === "incorrect"
-                  ? "text-white bg-red-600/60"
-                  : charState.status === "current"
-                  ? "text-white bg-blue-600 animate-pulse"
-                  : "text-gray-500"
-              } ${
-                charState.status === "current"
-                  ? "border-l-2 border-blue-400"
-                  : ""
-              }`}
-            >
-              {charState.char}
-            </span>
-          ))}
-        </div>
+      {/* Stats Dashboard */}
+      <div className="mb-4">
+        <Statistics stats={stats} />
       </div>
 
-      {/* Input Area */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-6">
-        <div className="flex items-center gap-4 mb-4">
-          <Play className="w-5 h-5 text-blue-400" />
-          <span className="text-white font-semibold">
-            {!isStarted && userInput.length === 0
-              ? "Start typing to begin the test"
-              : isFinished
-              ? "Test completed!"
-              : "Keep typing..."}
-          </span>
+      {/* Typing Playground */}
+      <div
+        className={`relative bg-[#0d1117] rounded-xl p-6 md:p-8 flex-grow min-h-0 mb-6 transition-all border ${
+          isInputFocused ? "border-blue-500/40" : "border-gray-800"
+        } ${hasError ? "shake border-red-500/50" : ""}`}
+        onClick={() => inputRef.current?.focus()}
+      >
+        {!isInputFocused && !isFinished && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#0d1117]/80 backdrop-blur-[2px] rounded-xl transition-opacity">
+            <button className="flex items-center gap-3 bg-blue-600 text-white px-6 py-3 rounded-lg font-bold shadow-lg shadow-blue-900/40 transform active:scale-95 transition-transform">
+              <Play className="w-5 h-5 fill-current" />
+              <span>CLICK TO START</span>
+            </button>
+          </div>
+        )}
+
+        <div className="typing-area relative z-10 h-full overflow-hidden">
+          <div ref={caretRef} className="caret" />
+          <div className="whitespace-pre-wrap break-words leading-relaxed relative z-10">
+            {getCharacterStates().map((charState, index) => (
+              <span
+                key={index}
+                ref={(el) => (charRefs.current[index] = el)}
+                className={`char ${charState.status}`}
+              >
+                {charState.char}
+              </span>
+            ))}
+          </div>
         </div>
 
         <input
@@ -641,30 +611,31 @@ const handleLeaveRoom = async () => {
           value={userInput}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
-          placeholder="Type the text above here..."
-          disabled={isFinished}
+          onFocus={() => setIsInputFocused(true)}
+          onBlur={() => setIsInputFocused(false)}
+          className="absolute inset-0 opacity-0 cursor-default"
           autoComplete="off"
           spellCheck="false"
           autoFocus
+          disabled={isFinished}
         />
       </div>
 
       {/* Controls */}
-      <div className="flex justify-center gap-4">
+      <div className="flex justify-center gap-4 shrink-0 pb-2">
         <button
           onClick={resetTest}
-          className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          className="flex items-center gap-2 bg-[#161b22] hover:bg-[#21262d] text-white px-6 py-2.5 rounded-lg font-semibold border border-gray-800 transition-colors active:scale-95"
         >
-          <RotateCcw className="w-4 h-4" />
-          Reset
+          <RotateCcw className="w-4 h-4 text-gray-400" />
+          <span>Reset</span>
         </button>
         <button
           onClick={startNewTest}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-bold transition-all active:scale-95"
         >
-          <Play className="w-4 h-4" />
-          New Test
+          <Play className="w-4 h-4 fill-current" />
+          <span>New Run</span>
         </button>
       </div>
     </div>

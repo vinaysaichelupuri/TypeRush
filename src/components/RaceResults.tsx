@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { RaceRoom } from "../types";
 import { FirebaseService } from "../services/firebaseService";
-import { generateText } from "../ utils/textGenerator";
+import { generateText } from "../utils/textGenerator";
 
 interface RaceResultsProps {
   room: RaceRoom;

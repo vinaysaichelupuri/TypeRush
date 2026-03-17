@@ -1,3 +1,98 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --bg-color: #0d1117;
+  --main-color: #e1e7ef;
+  --caret-color: #3b82f6;
+  --sub-color: #4b5563;
+  --error-color: #ef4444;
+  --correct-color: #f1f5f9;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--main-color);
+  margin: 0;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer components {
+  .typing-area {
+    font-size: 1.5rem;
+    line-height: 1.6;
+    letter-spacing: 0.1em;
+    user-select: none;
+  }
+
+  .char {
+    position: relative;
+    transition: color 0.1s ease;
+  }
+
+  .char.untyped {
+    color: var(--sub-color);
+  }
+
+  .char.correct {
+    color: var(--correct-color);
+  }
+
+  .char.incorrect {
+    color: var(--error-color);
+    text-decoration: underline;
+  }
+
+  .char.current {
+    color: var(--main-color);
+  }
+
+  .caret {
+    position: absolute;
+    background-color: var(--sub-color);
+    border-radius: 4px;
+    transition: all 0.15s ease-in-out;
+    animation: block-pulse 1s infinite alternate;
+  }
+
+  @keyframes block-pulse {
+    0% {
+      opacity: 0.4;
+      transform: scale(0.98);
+    }
+    100% {
+      opacity: 0.9;
+      transform: scale(1.05);
+    }
+  }
+
+
+  .shake {
+    animation: shake 0.2s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+
+  @keyframes shake {
+    10%,
+    90% {
+      transform: translate3d(-1px, 0, 0);
+    }
+    20%,
+    80% {
+      transform: translate3d(2px, 0, 0);
+    }
+    30%,
+    50%,
+    70% {
+      transform: translate3d(-4px, 0, 0);
+    }
+    40%,
+    60% {
+      transform: translate3d(4px, 0, 0);
+    }
+  }
+}

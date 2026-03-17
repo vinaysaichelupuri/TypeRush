@@ -5,27 +5,34 @@ import appLogo from "./assets/TypeRush.png";
 
 function App() {
   useEffect(() => {
-    localStorage.setItem("typingResults", JSON.stringify([]));
-  });
-  return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
-      <div className="flex items-center space-x-3">
-        <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg">
-          <img src={appLogo} alt="Logo" className="w-8 h-8 object-contain" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-            TypeRush
-          </h1>
-          <p className="text-gray-400 text-sm">Simple and fast typing test</p>
-        </div>
-      </div>
-      <div className="container mx-auto px-4 py-8 flex-grow">
-        <TypingTest />
-      </div>
+    if (!localStorage.getItem("typingResults")) {
+      localStorage.setItem("typingResults", JSON.stringify([]));
+    }
+  }, []);
 
-      <footer className="border-t border-gray-800 bg-gray-900/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-6">
+  return (
+    <div className="h-screen overflow-hidden bg-[#0d1117] text-[#e1e7ef] flex flex-col font-sans selection:bg-blue-500/30">
+      <header className="container mx-auto px-4 py-4 flex items-center justify-between shrink-0">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-blue-600 rounded-lg">
+            <img src={appLogo} alt="Logo" className="w-6 h-6 object-contain" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-white">
+              TypeRush
+            </h1>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 flex-grow flex flex-col items-center justify-center overflow-hidden py-2">
+        <div className="w-full max-w-5xl bg-[#161b22] border border-gray-800 rounded-2xl p-6 md:p-8 shadow-xl relative overflow-hidden">
+          <TypingTest />
+        </div>
+      </main>
+
+      <footer className="shrink-0 border-t border-gray-800 bg-[#0d1117] py-4">
+        <div className="container mx-auto px-4">
           <div className="text-center">
             <p className="text-gray-400 text-sm">
               Designed and Developed by{" "}
