@@ -3,17 +3,20 @@ import { Trophy, Users, Zap, Target } from 'lucide-react';
 import { RaceRoom, Player, CharacterState, RaceProgress } from '../types';
 import { FirebaseService } from '../services/firebaseService';
 import { calculateWPM, calculateAccuracy } from '../utils/textGenerator';
+import { Home } from 'lucide-react';
 
 interface MultiplayerRaceProps {
   room: RaceRoom;
   currentPlayerId: string;
   onRaceComplete: () => void;
+  onLeaveRoom: () => void;
 }
 
 const MultiplayerRace: React.FC<MultiplayerRaceProps> = ({ 
   room, 
   currentPlayerId, 
-  onRaceComplete 
+  onRaceComplete,
+  onLeaveRoom
 }) => {
   const [userInput, setUserInput] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -28,6 +31,25 @@ const MultiplayerRace: React.FC<MultiplayerRaceProps> = ({
   const currentPlayer = room.players[currentPlayerId];
   const players = Object.values(room.players).sort((a, b) => b.progress - a.progress);
   const finishedPlayers = players.filter(p => p.isFinished);
+
+  // Load saved progress on mount
+  useEffect(() => {
+    const savedInput = localStorage.getItem(`race_input_${room.id}_${currentPlayerId}`);
+    if (savedInput && !isFinished && room.status === 'racing') {
+      setUserInput(savedInput);
+      setCurrentIndex(savedInput.length);
+    }
+  }, [room.id, currentPlayerId]);
+
+  // Save progress when userInput changes
+  useEffect(() => {
+    if (userInput && !isFinished) {
+      localStorage.setItem(`race_input_${room.id}_${currentPlayerId}`, userInput);
+    }
+    if (isFinished) {
+      localStorage.removeItem(`race_input_${room.id}_${currentPlayerId}`);
+    }
+  }, [userInput, room.id, currentPlayerId, isFinished]);
 
   // Timer effect
   useEffect(() => {
@@ -56,12 +78,12 @@ const MultiplayerRace: React.FC<MultiplayerRaceProps> = ({
     }, 0);
 
     const incorrectChars = input.length - correctChars;
-    const wpm = calculateWPM(correctChars, timeElapsed);
+    const wpm = calculateWPM(input.length, timeElapsed);
     const accuracy = calculateAccuracy(correctChars, incorrectChars);
 
     const progress: RaceProgress = {
       playerId: currentPlayerId,
-      progress: correctChars,
+      progress: input.length,
       wpm,
       accuracy,
       isFinished: finished,
@@ -178,6 +200,15 @@ const MultiplayerRace: React.FC<MultiplayerRaceProps> = ({
           <div className="text-white font-mono">
             {formatTime(timeElapsed)}
           </div>
+        </div>
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={onLeaveRoom}
+            className="flex items-center gap-2 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white px-4 py-2 rounded-lg font-semibold border border-red-900/30 transition-all text-sm"
+          >
+            <Home className="w-4 h-4" />
+            Leave Race
+          </button>
         </div>
       </div>
 

@@ -84,7 +84,69 @@ const TypingTest: React.FC = () => {
     if (saved) {
       setSavedResults(JSON.parse(saved));
     }
+
+    // Check for room ID in URL query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomIdFromUrl = urlParams.get("room");
+
+    // Check for active multiplayer session
+    const savedRoomId = localStorage.getItem("activeRoomId");
+    const savedPlayerId = localStorage.getItem("activePlayerId");
+
+    // Logic: If URL has a room ID, and it's different from our saved session, 
+    // we should prioritize the NEW room from the URL.
+    if (roomIdFromUrl && savedRoomId && roomIdFromUrl !== savedRoomId) {
+      // Clear old session to join the new one
+      localStorage.removeItem("activeRoomId");
+      localStorage.removeItem("activePlayerId");
+      
+      setGameMode("multiplayer");
+      setMultiplayerState("menu");
+    } else if (savedRoomId && savedPlayerId) {
+      // No conflicting URL parameter, reconnect normally
+      reconnectToRoom(savedRoomId, savedPlayerId);
+    } else if (roomIdFromUrl) {
+      // First time joining via link
+      setGameMode("multiplayer");
+      setMultiplayerState("menu");
+    }
   }, []);
+
+  const reconnectToRoom = async (roomId: string, playerId: string) => {
+    setIsMultiplayerLoading(true);
+    try {
+      const roomExists = await FirebaseService.roomExists(roomId);
+      if (!roomExists) {
+        localStorage.removeItem("activeRoomId");
+        localStorage.removeItem("activePlayerId");
+        return;
+      }
+
+      unsubscribeRef.current = FirebaseService.subscribeToRoom(
+        roomId,
+        (room) => {
+          if (room) {
+            if (!room.players[playerId]) {
+              // Player is no longer in the room
+              handleLeaveRoom();
+              return;
+            }
+            setCurrentRoom(room);
+            setCurrentPlayerId(playerId);
+            setGameMode("multiplayer");
+          } else {
+            handleLeaveRoom();
+          }
+        },
+      );
+    } catch (error) {
+      console.error("Failed to reconnect:", error);
+      localStorage.removeItem("activeRoomId");
+      localStorage.removeItem("activePlayerId");
+    } finally {
+      setIsMultiplayerLoading(false);
+    }
+  };
 
   // Cleanup Firebase listener on unmount
   useEffect(() => {
@@ -135,20 +197,34 @@ const TypingTest: React.FC = () => {
     if (!currentRoom) return;
 
     // Handle room status transitions
-    if (currentRoom.status === "waiting" && multiplayerState === "results") {
-      setMultiplayerState("lobby");
-    } else if (
-      currentRoom.status === "racing" &&
-      multiplayerState === "lobby"
-    ) {
-      setMultiplayerState("racing");
-    } else if (
-      currentRoom.status === "finished" &&
-      multiplayerState === "racing"
-    ) {
-      setMultiplayerState("results");
+    if (currentRoom.status === "waiting") {
+      if (multiplayerState === "results" || multiplayerState === "menu") {
+        setMultiplayerState("lobby");
+      }
+    } else if (currentRoom.status === "racing") {
+      if (multiplayerState === "lobby") {
+        setMultiplayerState("racing");
+      }
+    } else if (currentRoom.status === "finished") {
+      if (multiplayerState !== "results") {
+        setMultiplayerState("results");
+      }
     }
   }, [currentRoom?.status, multiplayerState]);
+
+  // Check if all players finished (Host only)
+  useEffect(() => {
+    if (!currentRoom || !currentPlayerId || currentPlayerId !== currentRoom.creatorId) return;
+    if (currentRoom.status !== "racing") return;
+
+    const players = Object.values(currentRoom.players);
+    const allFinished = players.every(p => p.isFinished);
+    
+    if (allFinished && players.length > 0) {
+      FirebaseService.updateRoomStatus(currentRoom.id, "finished");
+    }
+  }, [currentRoom, currentPlayerId]);
+
 
   // Calculate stats
   useEffect(() => {
@@ -157,7 +233,7 @@ const TypingTest: React.FC = () => {
     }, 0);
 
     const incorrectChars = userInput.length - correctChars;
-    const wpm = calculateWPM(correctChars, timeElapsed);
+    const wpm = calculateWPM(userInput.length, timeElapsed);
     const accuracy = calculateAccuracy(correctChars, incorrectChars);
 
     setStats({
@@ -258,24 +334,20 @@ const TypingTest: React.FC = () => {
         focus === "random"
           ? generateTextByDifficulty(difficulty)
           : generateTextByFocus(focus);
-      const roomId = await FirebaseService.createRoom(playerName, newText);
+      const { roomId, playerId } = await FirebaseService.createRoom(playerName, newText);
 
       unsubscribeRef.current = FirebaseService.subscribeToRoom(
         roomId,
         (room) => {
           if (room) {
             setCurrentRoom(room);
-            setCurrentPlayerId(room.creatorId);
-
-            if (room.status === "racing" && multiplayerState === "lobby") {
-              setMultiplayerState("racing");
-            } else if (room.status === "finished") {
-              setMultiplayerState("results");
-            }
+            setCurrentPlayerId(playerId);
           }
         },
       );
 
+      localStorage.setItem("activeRoomId", roomId);
+      localStorage.setItem("activePlayerId", playerId);
       setMultiplayerState("lobby");
     } catch (error) {
       setMultiplayerError(
@@ -308,24 +380,12 @@ const TypingTest: React.FC = () => {
           (room) => {
             if (room) {
               setCurrentRoom(room);
-
-              if (room.status === "countdown" && multiplayerState === "lobby") {
-              } else if (
-                room.status === "racing" &&
-                multiplayerState === "lobby"
-              ) {
-              } else if (
-                room.status === "racing" &&
-                multiplayerState === "lobby"
-              ) {
-                setMultiplayerState("racing");
-              } else if (room.status === "finished") {
-                setMultiplayerState("results");
-              }
             }
           },
         );
 
+        localStorage.setItem("activeRoomId", roomId);
+        localStorage.setItem("activePlayerId", playerId);
         setMultiplayerState("lobby");
       }
     } catch (error) {
@@ -362,6 +422,8 @@ const TypingTest: React.FC = () => {
       }
     }
 
+    localStorage.removeItem("activeRoomId");
+    localStorage.removeItem("activePlayerId");
     setCurrentRoom(null);
     setCurrentPlayerId("");
     setMultiplayerState("menu");
@@ -431,6 +493,7 @@ const TypingTest: React.FC = () => {
           onBackToSinglePlayer={() => setGameMode("single")}
           isLoading={isMultiplayerLoading}
           error={multiplayerError}
+          initialRoomId={new URLSearchParams(window.location.search).get("room") || ""}
         />
       );
     }
@@ -452,6 +515,7 @@ const TypingTest: React.FC = () => {
           room={currentRoom}
           currentPlayerId={currentPlayerId}
           onRaceComplete={handleRaceComplete}
+          onLeaveRoom={handleLeaveRoom}
         />
       );
     }
