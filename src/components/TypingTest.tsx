@@ -325,16 +325,26 @@ const TypingTest: React.FC = () => {
   }, [resetTest, difficulty, focus]);
 
   // Multiplayer functions
-  const handleCreateRoom = async (playerName: string) => {
+  const handleCreateRoom = async (
+    playerName: string,
+    roomDifficulty?: "easy" | "medium" | "hard",
+    roomFocus?: "speed" | "accuracy" | "programming" | "random",
+  ) => {
     setIsMultiplayerLoading(true);
     setMultiplayerError("");
 
     try {
+      const diff = roomDifficulty || difficulty;
+      const foc = roomFocus || focus;
+
       const newText =
-        focus === "random"
-          ? generateTextByDifficulty(difficulty)
-          : generateTextByFocus(focus);
-      const { roomId, playerId } = await FirebaseService.createRoom(playerName, newText);
+        foc === "random"
+          ? generateTextByDifficulty(diff)
+          : generateTextByFocus(foc);
+      const { roomId, playerId } = await FirebaseService.createRoom(
+        playerName,
+        newText,
+      );
 
       unsubscribeRef.current = FirebaseService.subscribeToRoom(
         roomId,
@@ -436,6 +446,24 @@ const TypingTest: React.FC = () => {
     setMultiplayerState("results");
   };
 
+  const handleUpdateRoomSettings = async (
+    roomDifficulty: "easy" | "medium" | "hard",
+    roomFocus: "speed" | "accuracy" | "programming" | "random",
+  ) => {
+    if (!currentRoom) return;
+
+    const newText =
+      roomFocus === "random"
+        ? generateTextByDifficulty(roomDifficulty)
+        : generateTextByFocus(roomFocus);
+
+    try {
+      await FirebaseService.updateRoomSettings(currentRoom.id, newText);
+    } catch (error) {
+      console.error("Failed to update room settings:", error);
+    }
+  };
+
   const handleNewMultiplayerRace = async () => {
     if (!currentRoom) return;
 
@@ -505,6 +533,7 @@ const TypingTest: React.FC = () => {
           currentPlayerId={currentPlayerId}
           onStartRace={() => setMultiplayerState("racing")}
           onLeaveRoom={handleLeaveRoom}
+          onUpdateSettings={handleUpdateRoomSettings}
         />
       );
     }
@@ -642,7 +671,7 @@ const TypingTest: React.FC = () => {
       <div
         className={`relative bg-[#0d1117] rounded-xl p-6 md:p-8 flex-grow min-h-0 mb-6 transition-all border ${
           isInputFocused ? "border-blue-500/40" : "border-gray-800"
-        } ${hasError ? "shake border-red-500/50" : ""}`}
+        } ${hasError ? "border-red-500/50" : ""}`}
         onClick={() => inputRef.current?.focus()}
       >
         {!isInputFocused && !isFinished && (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Play, Copy, Crown, Clock, UserPlus } from 'lucide-react';
+import { Users, Play, Copy, Crown, Clock, UserPlus, UserMinus } from 'lucide-react';
 import { RaceRoom, Player } from '../types';
 import { FirebaseService } from '../services/firebaseService';
 
@@ -8,16 +8,30 @@ interface RoomLobbyProps {
   currentPlayerId: string;
   onStartRace: () => void;
   onLeaveRoom: () => void;
+  onUpdateSettings: (difficulty: "easy" | "medium" | "hard", focus: "speed" | "accuracy" | "programming" | "random") => void;
 }
 
 const RoomLobby: React.FC<RoomLobbyProps> = ({ 
   room, 
   currentPlayerId, 
   onStartRace, 
-  onLeaveRoom 
+  onLeaveRoom,
+  onUpdateSettings 
 }) => {
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [focus, setFocus] = useState<'random' | 'speed' | 'accuracy' | 'programming'>('random');
+
+  const handleDifficultyChange = (d: 'easy' | 'medium' | 'hard') => {
+    setDifficulty(d);
+    onUpdateSettings(d, focus);
+  };
+
+  const handleFocusChange = (f: 'random' | 'speed' | 'accuracy' | 'programming') => {
+    setFocus(f);
+    onUpdateSettings(difficulty, f);
+  };
 
   const isCreator = room.creatorId === currentPlayerId;
   const players = Object.values(room.players);
@@ -188,9 +202,64 @@ const handleStartRace = async () => {
           </div>
         </div>
         
+        {isCreator && (
+          <div className="mt-6 border-t border-gray-800 pt-6">
+            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-400" />
+              Adjust Race Settings
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block tracking-wider">
+                  Difficulty Level
+                </label>
+                <div className="bg-[#161b22] rounded-lg p-1 border border-gray-800 flex">
+                  {(['easy', 'medium', 'hard'] as const).map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => handleDifficultyChange(d)}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                        difficulty === d
+                          ? "bg-blue-600 text-white shadow-lg shadow-blue-900/20"
+                          : "text-gray-400 hover:text-white"
+                      }`}
+                    >
+                      {d.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block tracking-wider">
+                  Text Category
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['random', 'speed', 'accuracy', 'programming'] as const).map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => handleFocusChange(f)}
+                      className={`px-3 py-2 rounded-lg border text-xs font-bold transition-all text-left ${
+                        focus === f
+                          ? "bg-blue-600/10 border-blue-500/50 text-blue-400"
+                          : "bg-[#161b22] border-gray-800 text-gray-400 hover:text-white hover:border-gray-700"
+                      }`}
+                    >
+                      {f.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mt-6 border-t border-gray-800 pt-4">
-          <label className="block text-gray-400 text-sm mb-1">Text Preview</label>
-          <div className="bg-gray-800/50 px-4 py-3 rounded text-gray-300 text-sm leading-relaxed italic border border-gray-700">
+          <label className="block text-gray-400 text-sm mb-2 font-medium">Text Preview</label>
+          <div className="bg-gray-800/50 px-4 py-3 rounded text-gray-300 text-sm leading-relaxed italic border border-gray-700 animate-in fade-in slide-in-from-top-1 duration-300">
             "{room.text.substring(0, 150)}..."
           </div>
         </div>
@@ -224,6 +293,15 @@ const handleStartRace = async () => {
                   Joined {player.joinedAt ? new Date(player.joinedAt).toLocaleTimeString() : 'Unknown time'}
                 </div>
               </div>
+              {isCreator && player.id !== currentPlayerId && (
+                <button
+                  onClick={() => FirebaseService.leaveRoom(room.id, player.id)}
+                  className="p-2 text-red-500 hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-all flex items-center justify-center"
+                  title="Kick Player"
+                >
+                  <UserMinus className="w-4 h-4" />
+                </button>
+              )}
             </div>
           ))}
         </div>

@@ -23,14 +23,34 @@ const MultiplayerRace: React.FC<MultiplayerRaceProps> = ({
   const [startTime, setStartTime] = useState<number | null>(null);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(true);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastUpdateRef = useRef<number>(0);
+  const caretRef = useRef<HTMLDivElement>(null);
+  const charRefs = useRef<(HTMLSpanElement | null)[]>([]);
 
   const currentPlayer = room.players[currentPlayerId];
   const players = Object.values(room.players).sort((a, b) => b.progress - a.progress);
   const finishedPlayers = players.filter(p => p.isFinished);
+
+  // Update caret position
+  useEffect(() => {
+    if (caretRef.current && charRefs.current[currentIndex]) {
+      const charEle = charRefs.current[currentIndex];
+      caretRef.current.style.left = `${charEle.offsetLeft}px`;
+      caretRef.current.style.top = `${charEle.offsetTop}px`;
+      caretRef.current.style.width = `${charEle.offsetWidth}px`;
+      caretRef.current.style.height = `${charEle.offsetHeight}px`;
+    }
+  }, [currentIndex, room.text]);
+
+  // Update charRefs length when text changes
+  useEffect(() => {
+    charRefs.current = new Array(room.text.length).fill(null);
+  }, [room.text]);
 
   // Load saved progress on mount
   useEffect(() => {
@@ -111,6 +131,15 @@ const MultiplayerRace: React.FC<MultiplayerRaceProps> = ({
     // Start timer on first keystroke
     if (!startTime && value.length > 0) {
       setStartTime(Date.now());
+    }
+
+    // Error detection for shake effect
+    const lastCharTyped = value[value.length - 1];
+    const expectedChar = room.text[value.length - 1];
+
+    if (value.length > userInput.length && lastCharTyped !== expectedChar) {
+      setHasError(true);
+      setTimeout(() => setHasError(false), 200);
     }
 
     setUserInput(value);
@@ -280,54 +309,67 @@ const MultiplayerRace: React.FC<MultiplayerRaceProps> = ({
         </div>
       </div>
 
-      {/* Text Display */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-6 min-h-[200px]">
-        <div className="text-lg leading-relaxed font-mono">
-          {getCharacterStates().map((charState, index) => (
-            <span
-              key={index}
-              className={`${
-                charState.status === 'correct'
-                  ? 'text-gray-400 bg-green-900/30'
-                  : charState.status === 'incorrect'
-                  ? 'text-white bg-red-600/60'
-                  : charState.status === 'current'
-                  ? 'text-white bg-blue-600 animate-pulse'
-                  : 'text-gray-500'
-              } ${charState.status === 'current' ? 'border-l-2 border-blue-400' : ''}`}
-            >
-              {charState.char}
-            </span>
-          ))}
+      {/* Typing Playground */}
+      <div
+        className={`relative bg-[#0d1117] rounded-xl p-6 md:p-8 flex-grow min-h-0 mb-6 transition-all border ${
+          isInputFocused ? "border-blue-500/40" : "border-gray-800"
+        } ${hasError ? "border-red-500/50" : ""}`}
+        onClick={() => inputRef.current?.focus()}
+      >
+        <div className="typing-area relative z-10 h-full overflow-hidden">
+          <div ref={caretRef} className="caret" />
+          <div className="whitespace-pre-wrap break-words leading-relaxed relative z-10">
+            {getCharacterStates().map((charState, index) => (
+              <span
+                key={index}
+                ref={(el) => (charRefs.current[index] = el)}
+                className={`char ${charState.status}`}
+              >
+                {charState.char}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Input Area */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${isFinished ? 'bg-green-500' : 'bg-blue-500 animate-pulse'}`} />
-            <span className="text-white font-semibold">
-              {isFinished ? 'Race completed!' : 'Keep typing...'}
-            </span>
-          </div>
-          <div className="text-gray-400">
-            Progress: {Math.round((userInput.length / room.text.length) * 100)}%
-          </div>
-        </div>
-        
         <input
           ref={inputRef}
           type="text"
           value={userInput}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
-          placeholder="Type the text above here..."
-          disabled={isFinished}
+          onFocus={() => setIsInputFocused(true)}
+          onBlur={() => setIsInputFocused(false)}
+          className="absolute inset-0 opacity-0 cursor-default"
           autoComplete="off"
           spellCheck="false"
+          autoFocus
+          disabled={isFinished}
         />
+      </div>
+
+      {/* Progress Info */}
+      <div className="bg-gray-900 rounded-xl p-4 border border-gray-800 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className={`w-3 h-3 rounded-full ${isFinished ? 'bg-green-500' : 'bg-blue-500 animate-pulse'}`} />
+            <span className="text-white font-semibold flex items-center gap-2">
+              {isFinished ? (
+                <>
+                  <Zap className="w-4 h-4 text-yellow-400" />
+                  Race completed!
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4 text-blue-400 animate-pulse" />
+                  Keep typing...
+                </>
+              )}
+            </span>
+          </div>
+        </div>
+        <div className="text-gray-400 font-medium">
+          Progress: <span className="text-white">{Math.round((userInput.length / room.text.length) * 100)}%</span>
+        </div>
       </div>
     </div>
   );

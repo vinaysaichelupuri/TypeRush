@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Users, Plus, LogIn, ArrowLeft } from 'lucide-react';
 
 interface MultiplayerMenuProps {
-  onCreateRoom: (playerName: string) => void;
+  onCreateRoom: (playerName: string, difficulty: 'easy'|'medium'|'hard', focus: 'random'|'speed'|'accuracy'|'programming') => void;
   onJoinRoom: (roomId: string, playerName: string) => void;
   onBackToSinglePlayer: () => void;
   isLoading?: boolean;
@@ -21,11 +21,13 @@ const MultiplayerMenu: React.FC<MultiplayerMenuProps> = ({
   const [playerName, setPlayerName] = useState('');
   const [roomId, setRoomId] = useState(initialRoomId);
   const [activeTab, setActiveTab] = useState<'create' | 'join'>(initialRoomId ? 'join' : 'create');
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [focus, setFocus] = useState<'random' | 'speed' | 'accuracy' | 'programming'>('random');
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
     if (playerName.trim()) {
-      onCreateRoom(playerName.trim());
+      onCreateRoom(playerName.trim(), difficulty, focus);
     }
   };
 
@@ -103,16 +105,64 @@ const MultiplayerMenu: React.FC<MultiplayerMenuProps> = ({
               </div>
 
               <div className="bg-gray-800/50 rounded-lg p-4">
-                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
+                <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
                   <Users className="w-4 h-4" />
-                  Room Settings
+                  Race Settings
                 </h3>
-                <ul className="text-gray-400 text-sm space-y-1">
-                  <li>• Maximum 6 players per room</li>
-                  <li>• Random text will be generated for the race</li>
-                  <li>• You'll be the room host and can start the race</li>
-                  <li>• Share the room ID with friends to invite them</li>
-                </ul>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase mb-2 block tracking-wider">
+                      Difficulty Level
+                    </label>
+                    <div className="bg-[#161b22] rounded-lg p-1 border border-gray-800 flex">
+                      {(['easy', 'medium', 'hard'] as const).map((d) => (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => setDifficulty(d)}
+                          className={`flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                            difficulty === d
+                              ? "bg-blue-600 text-white shadow-lg"
+                              : "text-gray-400 hover:text-white"
+                          }`}
+                        >
+                          {d.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase mb-2 block tracking-wider">
+                      Text Category
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['random', 'speed', 'accuracy', 'programming'] as const).map((f) => (
+                        <button
+                          key={f}
+                          type="button"
+                          onClick={() => setFocus(f)}
+                          className={`px-3 py-2 rounded-lg border text-xs font-bold transition-all text-left ${
+                            focus === f
+                              ? "bg-blue-600/10 border-blue-500/50 text-blue-400"
+                              : "bg-[#161b22] border-gray-800 text-gray-400 hover:text-white hover:border-gray-700"
+                          }`}
+                        >
+                          {f.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-gray-700/50">
+                  <ul className="text-gray-500 text-xs space-y-1.5">
+                    <li className="flex items-center gap-2">• <span className="text-gray-400">Max 6 players</span> per room</li>
+                    <li className="flex items-center gap-2">• <span className="text-gray-400">Host controls</span> the race start</li>
+                    <li className="flex items-center gap-2">• <span className="text-gray-400">Share ID</span> to invite friends</li>
+                  </ul>
+                </div>
               </div>
 
               <button

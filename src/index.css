@@ -48,7 +48,7 @@ body {
   }
 
   .char.current {
-    color: var(--main-color);
+    color: var(--caret-color);
   }
 
   .caret {

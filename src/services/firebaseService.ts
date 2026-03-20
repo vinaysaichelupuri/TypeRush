@@ -201,6 +201,11 @@ const roomSnap = await getDoc(roomRef);
     });
   }
 
+  static async updateRoomSettings(roomId: string, newText: string): Promise<void> {
+    const roomRef = doc(db, 'races', roomId);
+    await updateDoc(roomRef, { text: newText });
+  }
+
   static async updateRoomStatus(roomId: string, status: 'waiting' | 'racing' | 'finished'): Promise<void> {
     const roomRef = doc(db, 'races', roomId);
     await updateDoc(roomRef, { status });

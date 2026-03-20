@@ -9,6 +9,7 @@ import {
   RotateCcw,
   Home,
   Users,
+  UserMinus,
 } from "lucide-react";
 import { RaceRoom } from "../types";
 import { FirebaseService } from "../services/firebaseService";
@@ -328,13 +329,24 @@ const RaceResults: React.FC<RaceResultsProps> = ({
                       )}
                     </div>
                   </div>
-                  <div>
-                    {player.id === room.creatorId ? (
-                      <span className="bg-blue-500/10 text-blue-400 text-[10px] px-2 py-1 rounded-lg border border-blue-500/20">HOSTING</span>
-                    ) : player.isReady ? (
-                      <span className="bg-green-500/10 text-green-400 text-[10px] px-2 py-1 rounded-lg border border-green-500/20 font-bold">READY</span>
-                    ) : (
-                      <span className="bg-gray-800 text-gray-500 text-[10px] px-2 py-1 rounded-lg border border-gray-700 font-bold">WAITING</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      {player.id === room.creatorId ? (
+                        <span className="bg-blue-500/10 text-blue-400 text-[10px] px-2 py-1 rounded-lg border border-blue-500/20 font-bold">HOSTING</span>
+                      ) : player.isReady ? (
+                        <span className="bg-green-500/10 text-green-400 text-[10px] px-2 py-1 rounded-lg border border-green-500/20 font-bold">READY</span>
+                      ) : (
+                        <span className="bg-gray-800 text-gray-500 text-[10px] px-2 py-1 rounded-lg border border-gray-700 font-bold">WAITING</span>
+                      )}
+                    </div>
+                    {isCreator && player.id !== currentPlayerId && (
+                      <button
+                        onClick={() => FirebaseService.leaveRoom(room.id, player.id)}
+                        className="p-1.5 text-red-500 hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-all flex items-center justify-center border border-red-900/10"
+                        title="Kick Player"
+                      >
+                        <UserMinus className="w-3.5 h-3.5" />
+                      </button>
                     )}
                   </div>
                 </div>
