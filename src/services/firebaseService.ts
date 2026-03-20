@@ -12,7 +12,7 @@ import { RaceRoom, Player, RaceProgress } from '../types';
 
 export class FirebaseService {
   // Create a new race room
-  static async createRoom(creatorName: string, text: string, maxPlayers: number = 6): Promise<string> {
+  static async createRoom(creatorName: string, text: string, maxPlayers: number = 6): Promise<{ roomId: string, playerId: string }> {
   const creatorId = `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
   const roomData: Omit<RaceRoom, 'id'> = {
@@ -39,7 +39,7 @@ export class FirebaseService {
   try {
     const docRef = await addDoc(collection(db, 'races'), roomData);
     await updateDoc(docRef, { id: docRef.id });
-    return docRef.id;
+    return { roomId: docRef.id, playerId: creatorId };
   } catch (err) {
     console.error("Error in FirebaseService.createRoom:", err); // <--- ADD THIS
     throw err;
@@ -199,6 +199,11 @@ const roomSnap = await getDoc(roomRef);
     await updateDoc(roomRef, {
       [`players.${playerId}`]: deleteField()
     });
+  }
+
+  static async updateRoomStatus(roomId: string, status: 'waiting' | 'racing' | 'finished'): Promise<void> {
+    const roomRef = doc(db, 'races', roomId);
+    await updateDoc(roomRef, { status });
   }
 
   // Check if room exists
