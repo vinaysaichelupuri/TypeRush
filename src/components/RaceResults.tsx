@@ -8,10 +8,13 @@ import {
   Target,
   RotateCcw,
   Home,
+  Users,
 } from "lucide-react";
 import { RaceRoom } from "../types";
 import { FirebaseService } from "../services/firebaseService";
 import { generateText } from "../utils/textGenerator";
+import { Copy } from "lucide-react";
+import { useState } from "react";
 
 interface RaceResultsProps {
   room: RaceRoom;
@@ -25,6 +28,19 @@ const RaceResults: React.FC<RaceResultsProps> = ({
   currentPlayerId,
   onBackToMenu,
 }) => {
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const copyInviteLink = async () => {
+    try {
+      const inviteLink = `${window.location.origin}${window.location.pathname}?room=${room.id}`;
+      await navigator.clipboard.writeText(inviteLink);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy invite link:", err);
+    }
+  };
+
   const players = Object.values(room.players)
     .filter((p) => p.isFinished)
     .sort((a, b) => {
@@ -33,6 +49,13 @@ const RaceResults: React.FC<RaceResultsProps> = ({
       }
       return b.wpm - a.wpm;
     });
+
+  const allPlayers = Object.values(room.players).sort((a, b) => {
+    // Sort by finished first, then by progress
+    if (a.isFinished && !b.isFinished) return -1;
+    if (!a.isFinished && b.isFinished) return 1;
+    return b.progress - a.progress;
+  });
 
   const isCreator = room.creatorId === currentPlayerId;
   const allMembersReady = Object.values(room.players)
@@ -112,231 +135,263 @@ const RaceResults: React.FC<RaceResultsProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-white mb-2">Race Complete!</h1>
+        <h1 className="text-4xl font-extrabold text-white mb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+          Race Complete!
+        </h1>
         <p className="text-gray-400">Final results and rankings</p>
       </div>
 
-      {/* Current Player Summary */}
-      {currentPlayer && currentPlayerRank > 0 && (
-        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-6">
-          <div className="text-center mb-4">
-            <div className="flex justify-center mb-3">
-              {getRankIcon(currentPlayerRank - 1)}
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-1">
-              {currentPlayerRank === 1
-                ? "Victory!"
-                : `${currentPlayerRank}${
-                    currentPlayerRank === 2
-                      ? "nd"
-                      : currentPlayerRank === 3
-                      ? "rd"
-                      : "th"
-                  } Place`}
-            </h2>
-            <p className="text-gray-400">
-              {getPerformanceMessage(currentPlayerRank, players.length)}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-400 mb-1">
-                {currentPlayer.wpm}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column: Summary & Rankings */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Current Player Summary */}
+          {currentPlayer && (
+            <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 shadow-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                {getRankIcon(currentPlayerRank - 1)}
               </div>
-              <div className="text-gray-400 text-sm">Words/Min</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-400 mb-1">
-                {currentPlayer.accuracy}%
-              </div>
-              <div className="text-gray-400 text-sm">Accuracy</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-400 mb-1">
-                {formatTime(currentPlayer.finishTime)}
-              </div>
-              <div className="text-gray-400 text-sm">Finish Time</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-400 mb-1">
-                #{currentPlayerRank}
-              </div>
-              <div className="text-gray-400 text-sm">Final Rank</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Ready Status Panel */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-6">
-        <h2 className="text-xl font-bold text-white mb-4">Ready for Next Race</h2>
-        <div className="space-y-2">
-          {Object.values(room.players).map((player) => (
-            <div
-              key={player.id}
-              className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                  {player.name ? player.name.charAt(0).toUpperCase() : "?"}
+              
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="flex-shrink-0">
+                  <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-purple-700 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-blue-500/20">
+                    {currentPlayerRank > 0 ? `#${currentPlayerRank}` : "?"}
+                  </div>
                 </div>
-                <span className="text-white">{player.name}</span>
-                {player.id === room.creatorId && (
-                  <span className="text-yellow-400 text-sm">(Host)</span>
-                )}
-              </div>
-              <div>
-                {player.id === room.creatorId ? (
-                  <span className="text-blue-400 text-sm">Waiting to start...</span>
-                ) : player.isReady ? (
-                  <span className="text-green-400 text-sm">✓ Ready</span>
-                ) : (
-                  <span className="text-gray-400 text-sm">Not ready</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Action Button */}
-      <div className="flex justify-center gap-4 mb-6">
-        {isCreator ? (
-          <button
-            onClick={handleStartNewRace}
-            disabled={!allMembersReady}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
-              allMembersReady
-                ? "bg-green-600 hover:bg-green-700 text-white"
-                : "bg-gray-600 text-gray-400 cursor-not-allowed"
-            }`}
-          >
-            <RotateCcw className="w-4 h-4" />
-            {allMembersReady ? "Start New Race" : "Waiting for players..."}
-          </button>
-        ) : (
-          <button
-            onClick={handleGetReady}
-            disabled={currentPlayer?.isReady}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
-              currentPlayer?.isReady
-                ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                : "bg-green-600 hover:bg-green-700 text-white"
-            }`}
-          >
-            <RotateCcw className="w-4 h-4" />
-            {currentPlayer?.isReady ? "Ready! Waiting for host..." : "I'm Ready!"}
-          </button>
-        )}
-      </div>
-
-      {/* Final Leaderboard */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-6">
-        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-yellow-400" />
-          Final Rankings
-        </h2>
-
-        <div className="space-y-3">
-          {players.map((player, index) => (
-            <div
-              key={player.id}
-              className={`flex items-center gap-4 p-4 rounded-lg border transition-colors ${getRankColor(
-                index
-              )} ${
-                player.id === currentPlayerId ? "ring-2 ring-blue-500/50" : ""
-              }`}
-            >
-              <div className="flex-shrink-0">{getRankIcon(index)}</div>
-
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                {player.name ? player.name.charAt(0).toUpperCase() : "?"}
-              </div>
-
-              <div className="flex-grow">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-white font-semibold">
-                    {player.name || "Unknown Player"}
-                  </span>
-                  {player.id === currentPlayerId && (
-                    <span className="text-blue-400 text-sm">(You)</span>
-                  )}
-                  {index === 0 && (
-                    <span className="bg-yellow-500 text-black text-xs px-2 py-1 rounded font-bold">
-                      WINNER
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-4 text-sm">
-                  <span className="text-blue-400 flex items-center gap-1">
-                    <Zap className="w-3 h-3" />
-                    {player.wpm} WPM
-                  </span>
-                  <span className="text-green-400 flex items-center gap-1">
-                    <Target className="w-3 h-3" />
-                    {player.accuracy}%
-                  </span>
-                  <span className="text-purple-400 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {formatTime(player.finishTime)}
-                  </span>
+                
+                <div className="flex-grow text-center md:text-left">
+                  <h2 className="text-2xl font-bold text-white mb-1">
+                    {currentPlayerRank === 1 ? "Victory!" : "Great Effort!"}
+                  </h2>
+                  <p className="text-gray-400 mb-4 max-w-md">
+                    {currentPlayerRank > 0 
+                      ? getPerformanceMessage(currentPlayerRank, players.length)
+                      : "Waiting for other players to finish..."}
+                  </p>
+                  
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-gray-800/50 rounded-xl p-3 border border-gray-700/50">
+                      <div className="text-xl font-bold text-blue-400">{currentPlayer.wpm}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">WPM</div>
+                    </div>
+                    <div className="bg-gray-800/50 rounded-xl p-3 border border-gray-700/50">
+                      <div className="text-xl font-bold text-green-400">{currentPlayer.accuracy}%</div>
+                      <div className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">ACC</div>
+                    </div>
+                    <div className="bg-gray-800/50 rounded-xl p-3 border border-gray-700/50">
+                      <div className="text-xl font-bold text-purple-400">{formatTime(currentPlayer.finishTime)}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">TIME</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
+          )}
 
-      {/* Race Statistics */}
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-6">
-        <h2 className="text-xl font-bold text-white mb-4">Race Statistics</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          <div>
-            <div className="text-2xl font-bold text-blue-400 mb-1">
-              {players.length}
+          {/* Final Leaderboard */}
+          <div className="bg-gray-900 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden">
+            <div className="p-6 border-b border-gray-800 flex items-center justify-between bg-gray-900/50">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-yellow-500" />
+                Final Rankings
+              </h2>
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                {players.length} Players Finished
+              </span>
             </div>
-            <div className="text-gray-400 text-sm">Total Racers</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-green-400 mb-1">
-              {Math.round(
-                players.reduce((sum, p) => sum + p.wpm, 0) / players.length
+
+            <div className="max-h-[500px] overflow-y-auto p-4 space-y-3 custom-scrollbar">
+              {players.length > 0 ? (
+                players.map((player, index) => (
+                  <div
+                    key={player.id}
+                    className={`flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 ${getRankColor(
+                      index
+                    )} ${
+                      player.id === currentPlayerId 
+                        ? "ring-2 ring-blue-500 shadow-lg shadow-blue-500/10 scale-[1.02]" 
+                        : "hover:border-gray-600"
+                    }`}
+                  >
+                    <div className="flex-shrink-0">{getRankIcon(index)}</div>
+
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-md">
+                      {player.name ? player.name.charAt(0).toUpperCase() : "?"}
+                    </div>
+
+                    <div className="flex-grow">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-white font-bold">
+                          {player.name || "Unknown Player"}
+                        </span>
+                        {player.id === currentPlayerId && (
+                          <span className="bg-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            YOU
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-4 text-xs">
+                        <span className="text-blue-400 font-semibold flex items-center gap-1">
+                          <Zap className="w-3 h-3" />
+                          {player.wpm} WPM
+                        </span>
+                        <span className="text-green-400 font-semibold flex items-center gap-1">
+                          <Target className="w-3 h-3" />
+                          {player.accuracy}%
+                        </span>
+                        <span className="text-purple-400 font-semibold flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatTime(player.finishTime)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12 text-gray-500 italic">
+                  Waiting for players to finish...
+                </div>
               )}
             </div>
-            <div className="text-gray-400 text-sm">Avg WPM</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-purple-400 mb-1">
-              {Math.round(
-                players.reduce((sum, p) => sum + p.accuracy, 0) / players.length
-              )}
-              %
-            </div>
-            <div className="text-gray-400 text-sm">Avg Accuracy</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-orange-400 mb-1">
-              {room.text.length}
-            </div>
-            <div className="text-gray-400 text-sm">Characters</div>
           </div>
         </div>
-      </div>
 
-      {/* Navigation Controls */}
-      <div className="flex justify-center gap-4">
-        <button
-          onClick={onBackToMenu}
-          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-        >
-          <Home className="w-4 h-4" />
-          Leave Room
-        </button>
+        {/* Right Column: Status & Statistics */}
+        <div className="space-y-6">
+          {/* Action Button Section */}
+          <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 shadow-2xl">
+            <h2 className="text-lg font-bold text-white mb-4">Game Control</h2>
+            <div className="space-y-4">
+              {isCreator ? (
+                <button
+                  onClick={handleStartNewRace}
+                  disabled={!allMembersReady}
+                  className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-bold transition-all transform active:scale-95 ${
+                    allMembersReady
+                      ? "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white shadow-lg shadow-green-900/20"
+                      : "bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700"
+                  }`}
+                >
+                  <RotateCcw className={`w-5 h-5 ${allMembersReady ? "animate-spin-slow" : ""}`} />
+                  {allMembersReady ? "START NEXT RACE" : "WAITING FOR PLAYERS"}
+                </button>
+              ) : (
+                <button
+                  onClick={handleGetReady}
+                  disabled={currentPlayer?.isReady}
+                  className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-bold transition-all transform active:scale-95 ${
+                    currentPlayer?.isReady
+                      ? "bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700"
+                      : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-900/20"
+                  }`}
+                >
+                  <RotateCcw className="w-5 h-5" />
+                  {currentPlayer?.isReady ? "READY FOR NEXT" : "I'M READY!"}
+                </button>
+              )}
+              
+              <button
+                onClick={onBackToMenu}
+                className="w-full flex items-center justify-center gap-3 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white px-6 py-3 rounded-xl font-bold border border-red-900/30 transition-all group"
+              >
+                <Home className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                LEAVE ROOM
+              </button>
+            </div>
+          </div>
+
+          {/* Ready Status Panel */}
+          <div className="bg-gray-900 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden">
+            <div className="p-4 border-b border-gray-800 bg-gray-900/50">
+              <h2 className="text-md font-bold text-white flex items-center gap-2">
+                <Users className="w-4 h-4 text-blue-400" />
+                Player Status
+              </h2>
+            </div>
+            <div className="max-h-[300px] overflow-y-auto p-4 space-y-2 custom-scrollbar">
+              {allPlayers.map((player) => (
+                <div
+                  key={player.id}
+                  className="flex items-center justify-between p-3 bg-gray-800/30 rounded-xl border border-gray-700/30"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 bg-gray-700 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                      {player.name ? player.name.charAt(0).toUpperCase() : "?"}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm text-white font-medium truncate max-w-[100px]">{player.name}</span>
+                      {player.id === room.creatorId && (
+                        <span className="text-[9px] text-yellow-500 font-bold uppercase tracking-tighter">Host</span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    {player.id === room.creatorId ? (
+                      <span className="bg-blue-500/10 text-blue-400 text-[10px] px-2 py-1 rounded-lg border border-blue-500/20">HOSTING</span>
+                    ) : player.isReady ? (
+                      <span className="bg-green-500/10 text-green-400 text-[10px] px-2 py-1 rounded-lg border border-green-500/20 font-bold">READY</span>
+                    ) : (
+                      <span className="bg-gray-800 text-gray-500 text-[10px] px-2 py-1 rounded-lg border border-gray-700 font-bold">WAITING</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Race Statistics */}
+          <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 shadow-2xl">
+            <h2 className="text-lg font-bold text-white mb-4">Room Stats</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 bg-gray-800/30 rounded-xl border border-gray-700/30">
+                <div className="text-xl font-bold text-blue-400">{players.length || 0}</div>
+                <div className="text-[10px] text-gray-500 font-bold uppercase">Finished</div>
+              </div>
+              <div className="text-center p-3 bg-gray-800/30 rounded-xl border border-gray-700/30">
+                <div className="text-xl font-bold text-green-400">
+                  {players.length > 0 
+                    ? Math.round(players.reduce((sum, p) => sum + p.wpm, 0) / players.length)
+                    : 0}
+                </div>
+                <div className="text-[10px] text-gray-500 font-bold uppercase">Avg WPM</div>
+              </div>
+              <div className="text-center p-3 bg-gray-800/30 rounded-xl border border-gray-700/30">
+                <div className="text-xl font-bold text-purple-400">
+                  {players.length > 0
+                    ? Math.round(players.reduce((sum, p) => sum + p.accuracy, 0) / players.length)
+                    : 0}%
+                </div>
+                <div className="text-[10px] text-gray-500 font-bold uppercase">Avg Acc</div>
+              </div>
+              <div className="text-center p-3 bg-gray-800/30 rounded-xl border border-gray-700/30">
+                <div className="text-xl font-bold text-orange-400">{room.text.length}</div>
+                <div className="text-[10px] text-gray-500 font-bold uppercase">Chars</div>
+              </div>
+            </div>
+
+            <div className="mt-6 border-t border-gray-800 pt-6">
+              <label className="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Invite Link</label>
+              <div className="flex items-center gap-2">
+                <code className="bg-blue-900/10 px-3 py-2 rounded text-blue-400 font-mono text-[10px] flex-grow truncate border border-blue-900/30">
+                  {window.location.origin}?room={room.id}
+                </code>
+                <button
+                  onClick={copyInviteLink}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition-all flex items-center justify-center shadow-lg shadow-blue-900/20 active:scale-90"
+                  title="Copy Invite Link"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {linkCopied && (
+                <p className="text-blue-400 text-[10px] mt-1 font-bold animate-pulse">Link copied to clipboard!</p>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

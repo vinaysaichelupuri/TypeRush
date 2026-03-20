@@ -7,6 +7,7 @@ interface MultiplayerMenuProps {
   onBackToSinglePlayer: () => void;
   isLoading?: boolean;
   error?: string;
+  initialRoomId?: string;
 }
 
 const MultiplayerMenu: React.FC<MultiplayerMenuProps> = ({
@@ -14,11 +15,12 @@ const MultiplayerMenu: React.FC<MultiplayerMenuProps> = ({
   onJoinRoom,
   onBackToSinglePlayer,
   isLoading = false,
-  error
+  error,
+  initialRoomId = ''
 }) => {
   const [playerName, setPlayerName] = useState('');
-  const [roomId, setRoomId] = useState('');
-  const [activeTab, setActiveTab] = useState<'create' | 'join'>('create');
+  const [roomId, setRoomId] = useState(initialRoomId);
+  const [activeTab, setActiveTab] = useState<'create' | 'join'>(initialRoomId ? 'join' : 'create');
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();

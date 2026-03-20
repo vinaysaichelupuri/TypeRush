@@ -17,6 +17,7 @@ const RoomLobby: React.FC<RoomLobbyProps> = ({
   onLeaveRoom 
 }) => {
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const isCreator = room.creatorId === currentPlayerId;
   const players = Object.values(room.players);
@@ -29,6 +30,17 @@ const RoomLobby: React.FC<RoomLobbyProps> = ({
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy room ID:', err);
+    }
+  };
+
+  const copyInviteLink = async () => {
+    try {
+      const inviteLink = `${window.location.origin}${window.location.pathname}?room=${room.id}`;
+      await navigator.clipboard.writeText(inviteLink);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy invite link:', err);
     }
   };
 
@@ -138,29 +150,48 @@ const handleStartRace = async () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-gray-400 text-sm mb-1">Room ID</label>
             <div className="flex items-center gap-2">
-              <code className="bg-gray-800 px-3 py-2 rounded text-white font-mono text-sm flex-grow break-all">
+              <code className="bg-gray-800 px-3 py-2 rounded text-white font-mono text-xs flex-grow break-all truncate">
                 {room.id}
               </code>
               <button
                 onClick={copyRoomId}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded transition-colors"
+                className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded transition-colors"
                 title="Copy Room ID"
               >
                 <Copy className="w-4 h-4" />
               </button>
             </div>
             {copied && (
-              <p className="text-green-400 text-sm mt-1">Room ID copied!</p>
+              <p className="text-green-400 text-xs mt-1">ID copied!</p>
             )}
           </div>
           
           <div>
-            <label className="block text-gray-400 text-sm mb-1">Text Preview</label>
-            <div className="bg-gray-800 px-3 py-2 rounded text-white text-sm max-h-20 overflow-hidden">
-              {room.text.substring(0, 100)}...
+            <label className="block text-gray-400 text-sm mb-1">Invite Link (Share with friends)</label>
+            <div className="flex items-center gap-2">
+              <code className="bg-blue-900/20 px-3 py-2 rounded text-blue-300 font-mono text-xs flex-grow truncate">
+                {window.location.origin}{window.location.pathname}?room={room.id}
+              </code>
+              <button
+                onClick={copyInviteLink}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded transition-colors flex items-center gap-2"
+                title="Copy Invite Link"
+              >
+                <Copy className="w-4 h-4" />
+                <span className="text-xs font-bold hidden sm:inline">LINK</span>
+              </button>
             </div>
+            {linkCopied && (
+              <p className="text-blue-400 text-xs mt-1">Invite link copied!</p>
+            )}
+          </div>
+        </div>
+        
+        <div className="mt-6 border-t border-gray-800 pt-4">
+          <label className="block text-gray-400 text-sm mb-1">Text Preview</label>
+          <div className="bg-gray-800/50 px-4 py-3 rounded text-gray-300 text-sm leading-relaxed italic border border-gray-700">
+            "{room.text.substring(0, 150)}..."
           </div>
         </div>
       </div>
