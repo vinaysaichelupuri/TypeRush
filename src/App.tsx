@@ -25,8 +25,8 @@ function App() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 flex-grow flex flex-col items-center justify-center overflow-hidden py-2">
-        <div className="w-full max-w-5xl bg-[#161b22] border border-gray-800 rounded-2xl p-6 md:p-8 shadow-xl relative overflow-hidden">
+      <main className="container mx-auto px-4 flex-grow flex flex-col items-center justify-start overflow-y-auto py-6">
+        <div className="w-full max-w-6xl bg-[#161b22] border border-gray-800 rounded-2xl p-6 md:p-8 shadow-xl relative">
           <TypingTest />
         </div>
       </main>

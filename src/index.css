@@ -17,7 +17,6 @@ body {
   background-color: var(--bg-color);
   color: var(--main-color);
   margin: 0;
-  overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -74,6 +73,23 @@ body {
 
   .shake {
     animation: shake 0.2s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
   }
 
   @keyframes shake {
